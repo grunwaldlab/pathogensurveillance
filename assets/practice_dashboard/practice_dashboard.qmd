@@ -230,7 +230,6 @@ max_label_size <- max(nchar(core_plots[[1]]$data$label))
 print_figures_with_selector(plot_one, selector = list('Color By' = names(core_plots)), id_prefix = 'core-gene-phylo', width = 1700 + max_label_size * 30, height = 500 + tip_count * 60, res = 300)
 ```
 
-
 ```{r, results='asis', eval = length(phylo_paths) > 0}
 cat('
 ::: {.callout-tip collapse="true"}
@@ -254,7 +253,7 @@ Could not generate core genome phylogeny.
 
 ## Column1
 
-::: {.card title="SNP Trees"}
+::: {.card .flow title="SNP Trees"}
 ```{r results='asis'}
 snp_plots <- variant_tree_plot(params$inputs, interactive = FALSE)
 plot_one <- function(x) {
@@ -296,7 +295,7 @@ sample_data <- sample_meta_parsed(params$inputs)
 ref_data <- ref_meta_parsed(params$inputs)
 ```
 
-::: {.card title="Minnimum Spanning Network"}
+::: {.card title="Minnimum Spanning Network" .fill}
 ```{r plot_msns, results='asis', eval = length(alignments) > 0}
 # Find which columns are used to provide colors to the trees, if any
 ids_used <- unique(unlist(lapply(alignments, function(a) {
@@ -350,16 +349,18 @@ Could not generate minimum spanning networks. This is likely due to not having a
 
 # References {orientation="rows"}
 
-## Row1 {.flow}
+## Row1
 
-::: card
+::: {.card .flow}
 ### Methods
 
 The `pathogen surveillance` pipeline used the following tools that should be referenced as appropriate:
 
 -   A sample is first identified to genus using sendsketch and further identified to species using sourmash [@brown2016sourmash].
 -   The `nextflow` data-driven computational pipeline enables deployment of complex parallel and reactive workflows [@di2017nextflow].
+:::
 
+::: card
 ### Input Settings
 
 Add settings used to run Nextflow and the pipeline parameters.
@@ -369,18 +370,13 @@ Add settings used to run Nextflow and the pipeline parameters.
 
 ### Analysis Software
 
-Error in file(file, "rt") : cannot open the connection
+
 
 ## Row3
 
 ### Versions and Packages
 
-```{r, include=FALSE}
-# automatically create a bib database for R packages
-knitr::write_bib(c(
-  .packages(), 'bookdown', 'knitr', 'rmarkdown'
-), 'packages.bib')
-```
+
 
 # About
 
