@@ -1,0 +1,248 @@
+---
+title: "Draft_2_dash"
+author: "Grunwald Lab"
+params:
+  inputs: "../main_report/_test_data/xanthomonas/xan_test_inputs"
+theme: cerulean
+format: 
+  dashboard:
+    scrolling: true
+editor: visual
+---
+
+
+```{r knitr_settings}
+knitr::opts_chunk$set(echo = FALSE, fig.width = 8, warning = FALSE, message = FALSE)
+```
+
+```{r library}
+library(dplyr)
+library(ggplot2)
+library(readr)
+library(knitr)
+library(purrr)
+library(yaml)
+library(ape)
+library(magrittr)
+library(pheatmap)
+library(heatmaply)
+library(tidyverse)
+library(palmerpenguins)
+library(ade4)
+library(adegenet)
+library(ggtree)
+library(igraph)
+library(visNetwork)
+library(phangorn)
+library(ggplot2)
+library(ggnewscale)
+library(kableExtra)
+library(plotly)
+library(webshot2)
+library(ggdendro)
+library(rcrossref)
+library(devtools)
+library(phylocanvas)
+library(poppr)
+library(metacoder)
+library(psminer)
+```
+
+
+```{r Var1}
+group <- report_group_parsed(params$inputs)
+sample_data <- sample_meta_parsed(params$inputs)
+```
+
+```{r Var2}
+threshold_options <- c(0.0001, 0.001, 0.01, 0.1)
+align_data <- variant_align_path_data(params$inputs)
+alignments <- variant_align_parsed(params$inputs)
+alignments <- alignments[!unlist(lapply(alignments, is.null))]
+align_data <- align_data[align_data$path %in% names(alignments), ]
+sample_data <- sample_meta_parsed(params$inputs)
+ref_data <- ref_meta_parsed(params$inputs)
+```
+
+```{r Var3}
+top_hits <- sendsketch_parsed(params$inputs, only_best = TRUE)
+unique_tax <- unique(sub(top_hits$taxonomy, pattern = ';s:(.+);.+$', replacement = ';s:\\1')) # ignore below species level information
+is_single_taxon <- length(unique_tax) == 1
+```
+
+```{r Var4}
+core_plots <- core_tree_plot(params$inputs, interactive = FALSE)
+```
+
+::: {.callout-tip title="Summary" collapse="true"}
+This report is produced by the **`nf-core/pathogensurveillance` pipeline**.
+
+* **Report group:** `r group`
+* **Sample count:** `r nrow(sample_data)`
+* **Last updated:** `r format(Sys.time(), '%B %d , %Y')`
+* **Pipeline version:** {{< var version >}}
+
+:::
+
+# Taxonomic Classification
+
+:::{.card .flow title="Initial Identification"}
+
+```{r fig.height = 8, eval = !is_single_taxon}
+psminer::sendsketch_taxonomy_plot(top_hits)
+```
+
+```{r, results='asis', eval = !is_single_taxon}
+cat('
+::: {.callout-tip collapse="true"}
+## About this plot
+
+This plot shows the distribution of tentative taxonomic classifications for all samples.
+Only the "highest scoring" results for each sample is considered.
+
+Hover your cursor over parts of the sunburst plot will display the number of samples in each taxon.
+Clicking on a section will subset the plot to that taxon.
+Clicking on the middle will undo the subset.
+:::
+')
+```
+
+```{r, results='asis', eval = is_single_taxon}
+n_samp <- nrow(top_hits)
+formatted_classification <- unique_tax %>%
+    gsub(pattern = "[a-z]+:", replacement = "") %>%
+    gsub(pattern = ";", replacement = " > ")
+cat(paste0(
+"Initial classification of ", ifelse(n_samp == 1, "the sample", paste0(n_samp, " samples")),
+" identified ", ifelse(n_samp == 1, "it", "all of them"), " as:\n\n",
+"**", formatted_classification, "**"
+))
+```
+
+:::
+
+# MSN
+
+:::{.card title="Minnimum Spanning Network"}
+
+```{r plot_msns, results='asis', eval = length(alignments) > 0}
+# Find which columns are used to provide colors to the trees, if any
+ids_used <- unique(unlist(lapply(alignments, function(a) {
+  if (is.null(a)) {
+    return(character(0))
+  } else {
+    return(rownames(a))
+  }
+})))
+color_by_cols <- unique(unlist(strsplit(sample_data$color_by[sample_data$sample_id %in% ids_used], split = ';')))
+color_by_cols <- color_by_cols[! is.na(color_by_cols)]
+color_by_col_names <- c(color_by_cols, 'Default')
+color_by_cols <- c(as.list(color_by_cols), list(NULL))  # NULL ensures that the default color scheme is also used
+
+plot_one <- function(ref_id, threshold, color_by) {
+  align <- alignments[[align_data$path[align_data$ref_id == ref_id]]]
+  align_without_ref <- align[rownames(align) != ref_id, ]
+  psminer:::make_MSN(align_without_ref, sample_data, user_seed = 1, snp_diff_prop = threshold, population = color_by)
+}
+
+plot_vars <- list(
+  Reference = align_data$ref_id,
+  Threshold = threshold_options,
+  'Color By' = unlist(color_by_cols)
+)
+print_figures_with_selector(plot_one, selector = plot_vars, id_prefix = 'snp-msn', width = 1500, height = 1500, res = 200)
+```
+
+:::{.card .flow}
+```{r, results='asis', eval = length(alignments) > 0}
+cat('
+::: {.callout-tip collapse="true"}
+
+## About this plot
+
+This figure depicts a minimium spanning network (MSN).
+The nodes represent unique multiocus genotypes, and the size of nodes is proportional to the # number of samples that share the same genotype.
+
+The edges represent the SNP differences between two given genotypes, and the darker the color of the edges, the fewer SNP differences between the two.
+
+Note: within these MSNs, edge lengths are not proportional to SNP differences.
+:::
+ ')
+```
+
+```{asis div_no_snp_align, echo = length(alignments) <= 0}
+cat('
+Could not generate minimum spanning networks. This is likely due to not having any FASTA SNP alignment inputs.
+')
+```
+:::
+:::
+
+
+# Phylogenetics
+
+## Row1
+:::{.card title="Phylogenetic Content"}
+This section includes phylogenetic trees of samples with references sequences downloaded from [RefSeq](https://www.ncbi.nlm.nih.gov/refseq/) meant to provide a reliable identification using genome-scale data.
+The accuracy of this identification depends on the presence of close reference sequences in RefSeq and the accuracy of the initial identification.
+
+:::{.card size=20%}
+```{r results='asis'}
+plot_one <- function(x) {
+    print(core_plots[[x]])
+}
+tip_count <- sum(core_plots[[1]]$data$isTip)
+max_label_size <- max(nchar(core_plots[[1]]$data$label))
+print_figures_with_selector(plot_one, selector = list('Color By' = names(core_plots)), id_prefix = 'core-gene-phylo', width = 1700 + max_label_size * 30, height = 500 + tip_count * 60, res = 300)
+```
+:::
+
+```{r, results='asis', eval = length(core_tree_path(params$inputs)) > 0}
+cat('
+::: {.callout-tip collapse="true"}
+## About this plot
+
+This a core gene phylogeny of samples with reference genomes for context.
+A core gene phylogeny uses the sequences of all gene shared by all of the genomes included in the tree to infer evolutionary relationships.
+It is the most robust identification provided by this pipeline, but its precision is still limited by the availability of similar reference sequences.
+:::
+')
+```
+
+```{r, results='asis', eval = length(core_tree_path(params$inputs)) == 0}
+cat('
+Could not generate core genome phylogeny. No tree files found.
+')
+```
+:::
+
+
+# ANI Heatmap
+
+## Row1
+
+:::{.card title="ANI Heatmap" width=30%}
+```{r}
+# Parse ANI matrix
+ani_matrix <- estimated_ani_matrix_parsed(params$inputs)[[1]]
+sample_data <- sample_meta_parsed(params$inputs)
+reference_data <- ref_meta_parsed(params$inputs)
+print_ani_table(ani_matrix * 100, sample_data, reference_data)
+```
+:::
+
+:::{.card}
+```{r ani_heatmap, fig.height = 10}
+make_ani_heatmap(ani_matrix * 100, reference_data, sample_data)
+```
+
+::: {.callout-tip collapse="true"}
+## About this plot
+
+This plot shows the results of comparing the similarity of all samples and references to each other.
+These similarity metrics are based on the presence and abundance of short exact sequence matches between samples (i.e. comparisons of k-mer sketches).
+These measurements are not as reliable as the methods used to create phylogenetic trees, but may be useful if phylogenetic trees could not be inferred for these samples.
+:::
+:::
+
+#
