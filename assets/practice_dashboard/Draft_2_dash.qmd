@@ -10,7 +10,6 @@ format:
 editor: visual
 ---
 
-
 ```{r knitr_settings}
 knitr::opts_chunk$set(echo = FALSE, fig.width = 8, warning = FALSE, message = FALSE)
 ```
@@ -48,7 +47,6 @@ library(metacoder)
 library(psminer)
 ```
 
-
 ```{r Var1}
 group <- report_group_parsed(params$inputs)
 sample_data <- sample_meta_parsed(params$inputs)
@@ -77,17 +75,15 @@ core_plots <- core_tree_plot(params$inputs, interactive = FALSE)
 ::: {.callout-tip title="Summary" collapse="true"}
 This report is produced by the **`nf-core/pathogensurveillance` pipeline**.
 
-* **Report group:** `r group`
-* **Sample count:** `r nrow(sample_data)`
-* **Last updated:** `r format(Sys.time(), '%B %d , %Y')`
-* **Pipeline version:** {{< var version >}}
-
+-   **Report group:** `r group`
+-   **Sample count:** `r nrow(sample_data)`
+-   **Last updated:** `r format(Sys.time(), '%B %d , %Y')`
+-   **Pipeline version:** {{< var version >}}
 :::
 
 # Taxonomic Classification
 
-:::{.card .flow title="Initial Identification"}
-
+::: {.card .flow title="Initial Identification"}
 ```{r fig.height = 8, eval = !is_single_taxon}
 psminer::sendsketch_taxonomy_plot(top_hits)
 ```
@@ -118,13 +114,11 @@ cat(paste0(
 "**", formatted_classification, "**"
 ))
 ```
-
 :::
 
 # MSN
 
-:::{.card title="Minnimum Spanning Network"}
-
+::: {.card title="Minnimum Spanning Network"}
 ```{r plot_msns, results='asis', eval = length(alignments) > 0}
 # Find which columns are used to provide colors to the trees, if any
 ids_used <- unique(unlist(lapply(alignments, function(a) {
@@ -153,7 +147,7 @@ plot_vars <- list(
 print_figures_with_selector(plot_one, selector = plot_vars, id_prefix = 'snp-msn', width = 1500, height = 1500, res = 200)
 ```
 
-:::{.card .flow}
+::: {.card .flow}
 ```{r, results='asis', eval = length(alignments) > 0}
 cat('
 ::: {.callout-tip collapse="true"}
@@ -178,15 +172,14 @@ Could not generate minimum spanning networks. This is likely due to not having a
 :::
 :::
 
-
 # Phylogenetics
 
 ## Row1
-:::{.card title="Phylogenetic Content"}
-This section includes phylogenetic trees of samples with references sequences downloaded from [RefSeq](https://www.ncbi.nlm.nih.gov/refseq/) meant to provide a reliable identification using genome-scale data.
-The accuracy of this identification depends on the presence of close reference sequences in RefSeq and the accuracy of the initial identification.
 
-:::{.card size=20%}
+::: {.card title="Phylogenetic Content"}
+This section includes phylogenetic trees of samples with references sequences downloaded from [RefSeq](https://www.ncbi.nlm.nih.gov/refseq/) meant to provide a reliable identification using genome-scale data. The accuracy of this identification depends on the presence of close reference sequences in RefSeq and the accuracy of the initial identification.
+
+::: {.card size="20%"}
 ```{r results='asis'}
 plot_one <- function(x) {
     print(core_plots[[x]])
@@ -216,12 +209,11 @@ Could not generate core genome phylogeny. No tree files found.
 ```
 :::
 
-
 # ANI Heatmap
 
 ## Row1
 
-:::{.card title="ANI Heatmap" width=30%}
+::: {.card title="ANI Heatmap" width="30%"}
 ```{r}
 # Parse ANI matrix
 ani_matrix <- estimated_ani_matrix_parsed(params$inputs)[[1]]
@@ -231,7 +223,7 @@ print_ani_table(ani_matrix * 100, sample_data, reference_data)
 ```
 :::
 
-:::{.card}
+::: {.card}
 ```{r ani_heatmap, fig.height = 10}
 make_ani_heatmap(ani_matrix * 100, reference_data, sample_data)
 ```
@@ -239,10 +231,20 @@ make_ani_heatmap(ani_matrix * 100, reference_data, sample_data)
 ::: {.callout-tip collapse="true"}
 ## About this plot
 
-This plot shows the results of comparing the similarity of all samples and references to each other.
-These similarity metrics are based on the presence and abundance of short exact sequence matches between samples (i.e. comparisons of k-mer sketches).
-These measurements are not as reliable as the methods used to create phylogenetic trees, but may be useful if phylogenetic trees could not be inferred for these samples.
+This plot shows the results of comparing the similarity of all samples and references to each other. These similarity metrics are based on the presence and abundance of short exact sequence matches between samples (i.e. comparisons of k-mer sketches). These measurements are not as reliable as the methods used to create phylogenetic trees, but may be useful if phylogenetic trees could not be inferred for these samples.
 :::
 :::
 
-#
+# Practice Map
+
+::: {.card title="Leaflet Practice"}
+
+This is a practice at getting leaflet to work in my own dashboards.
+
+```{r Practice_map}
+m <- leaflet() %>%
+  addTiles() %>%  # Add default OpenStreetMap map tiles
+  addMarkers(lng=174.768, lat=-36.852, popup="The birthplace of R")
+m  # Print the map
+```
+:::
