@@ -1,12 +1,12 @@
 ---
-title: "Draft_1_dash"
+title: "Draft_1.5_dash"
 author: "Grunwald Lab"
 params:
   inputs: "../main_report/_test_data/xanthomonas/xan_test_inputs"
 format: 
   dashboard:
     scrolling: true
-theme: pulse
+theme: united
 editor: visual
 ---
 
@@ -81,9 +81,24 @@ This report is produced by the **`nf-core/pathogensurveillance` pipeline**.
 -   **Pipeline version:** {{< var version >}}
 :::
 
-# Layout 1
+# Layout 2
 
 ## Row1
+
+::: {.card title="Practice Map" .flow}
+
+This is a practice at getting leaflet to work in my own dashboards.
+
+```{r Practice_map2}
+m <- leaflet() %>%
+  addTiles() %>%  # Add default OpenStreetMap map tiles
+  addMarkers(lng=174.768, lat=-36.852, popup="The birthplace of R")
+m  # Print the map
+```
+:::
+
+
+## Row2
 
 ::: {.card .flow title="Initial Identification"}
 ```{r fig.height = 8, eval = !is_single_taxon}
@@ -172,23 +187,33 @@ Could not generate minimum spanning networks. This is likely due to not having a
 :::
 :::
 
-## Row2
+## Row3
 
-::: {.card title="Practice Map" .flow}
-
-This is a practice at getting leaflet to work in my own dashboards.
-
-```{r Practice_map1}
-m <- leaflet() %>%
-  addTiles() %>%  # Add default OpenStreetMap map tiles
-  addMarkers(lng=174.768, lat=-36.852, popup="The birthplace of R")
-m  # Print the map
+::: {.card .flow title="ANI Heatmap"}
+```{r}
+# Parse ANI matrix
+ani_matrix <- estimated_ani_matrix_parsed(params$inputs)[[1]]
+sample_data <- sample_meta_parsed(params$inputs)
+reference_data <- ref_meta_parsed(params$inputs)
+print_ani_table(ani_matrix * 100, sample_data, reference_data)
 ```
 :::
 
-## Row3
+## Row4
 
-::: {.card title="Phylogenetic Content"}
+:::{.card width="60%"}
+```{r ani_heatmap, fig.height = 10}
+make_ani_heatmap(ani_matrix * 100, reference_data, sample_data)
+```
+
+::: {.callout-tip collapse="true"}
+## About this plot
+
+This plot shows the results of comparing the similarity of all samples and references to each other. These similarity metrics are based on the presence and abundance of short exact sequence matches between samples (i.e. comparisons of k-mer sketches). These measurements are not as reliable as the methods used to create phylogenetic trees, but may be useful if phylogenetic trees could not be inferred for these samples.
+:::
+:::
+
+::: {.card title="Phylogenetic Content" width="40%"}
 This section includes phylogenetic trees of samples with references sequences downloaded from [RefSeq](https://www.ncbi.nlm.nih.gov/refseq/) meant to provide a reliable identification using genome-scale data. The accuracy of this identification depends on the presence of close reference sequences in RefSeq and the accuracy of the initial identification.
 
 ```{r results='asis'}
@@ -217,25 +242,5 @@ cat('
 Could not generate core genome phylogeny. No tree files found.
 ')
 ```
-:::
-
-::: {.card .flow title="ANI Heatmap"}
-```{r}
-# Parse ANI matrix
-ani_matrix <- estimated_ani_matrix_parsed(params$inputs)[[1]]
-sample_data <- sample_meta_parsed(params$inputs)
-reference_data <- ref_meta_parsed(params$inputs)
-print_ani_table(ani_matrix * 100, sample_data, reference_data)
-```
-
-```{r ani_heatmap, fig.height = 10}
-make_ani_heatmap(ani_matrix * 100, reference_data, sample_data)
-```
-
-::: {.callout-tip collapse="true"}
-## About this plot
-
-This plot shows the results of comparing the similarity of all samples and references to each other. These similarity metrics are based on the presence and abundance of short exact sequence matches between samples (i.e. comparisons of k-mer sketches). These measurements are not as reliable as the methods used to create phylogenetic trees, but may be useful if phylogenetic trees could not be inferred for these samples.
-:::
 :::
 
