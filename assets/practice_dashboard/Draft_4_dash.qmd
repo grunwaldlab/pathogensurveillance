@@ -74,9 +74,16 @@ core_plots <- core_tree_plot(params$inputs, interactive = FALSE)
 
 # Results
 
-## Row1{.tabset title="Plots"}
+## Row1
 
-::: {.card title="Phylogenetic Content"}
+### Column 1 
+
+::: {.card title="Phylogeny"}
+
+::: {.panel-tabset}
+
+## Phylo
+
 This section includes phylogenetic trees of samples with references sequences downloaded from [RefSeq](https://www.ncbi.nlm.nih.gov/refseq/) meant to provide a reliable identification using genome-scale data. The accuracy of this identification depends on the presence of close reference sequences in RefSeq and the accuracy of the initial identification.
 
 ```{r results='asis'}
@@ -105,9 +112,9 @@ cat('
 Could not generate core genome phylogeny. No tree files found.
 ')
 ```
-:::
 
-::: {.card .flow title="SNP Trees"}
+## SNP tree
+
 ```{r results='asis'}
 snp_plots <- variant_tree_plot(params$inputs, interactive = FALSE)
 plot_one <- function(x) {
@@ -135,9 +142,9 @@ Question-does it make sense to be showing the reference within the tree?
 ```{r div_no_snp_phylo, eval = length(snp_plots) <= 0}
 cat('There is no tree to draw. See staus messages at the start of the report for details.')
 ```
-:::
 
-::: {.card .flow title="Minnimum Spanning Network"}
+## MSN
+
 ```{r plot_msns, results='asis', eval = length(alignments) > 0}
 # Find which columns are used to provide colors to the trees, if any
 ids_used <- unique(unlist(lapply(alignments, function(a) {
@@ -166,7 +173,6 @@ plot_vars <- list(
 print_figures_with_selector(plot_one, selector = plot_vars, id_prefix = 'snp-msn', width = 1500, height = 1500, res = 200)
 ```
 
-::: {.card .flow}
 ```{r, results='asis', eval = length(alignments) > 0}
 cat('
 ::: {.callout-tip collapse="true"}
@@ -188,18 +194,26 @@ cat('
 Could not generate minimum spanning networks. This is likely due to not having any FASTA SNP alignment inputs.
 ')
 ```
-:::
+
 :::
 
-## Row2{.tabset title="ANI"}
+:::
+
+### Column 2
+
+::: {.card title="ANI comparisons"}
 
 ```{r ANI_Variables}
 ani_matrix <- estimated_ani_matrix_parsed(params$inputs)[[1]]
 sample_data <- sample_meta_parsed(params$inputs)
 reference_data <- ref_meta_parsed(params$inputs)
 ```
+  
 
-:::{.card .flow title="Heatmap"}
+::: {.panel-tabset}
+
+## ANI heatmap
+
 ```{r ani_heatmap, fig.height = 10}
 make_ani_heatmap(ani_matrix * 100, reference_data, sample_data)
 ```
@@ -209,13 +223,17 @@ make_ani_heatmap(ani_matrix * 100, reference_data, sample_data)
 
 This plot shows the results of comparing the similarity of all samples and references to each other. These similarity metrics are based on the presence and abundance of short exact sequence matches between samples (i.e. comparisons of k-mer sketches). These measurements are not as reliable as the methods used to create phylogenetic trees, but may be useful if phylogenetic trees could not be inferred for these samples.
 :::
-:::
 
-::: {.card title="Table"}
+
+## ANI table
+
 ```{r}
 # Parse ANI matrix
 print_ani_table(ani_matrix * 100, sample_data, reference_data)
 ```
+
+::: 
+
 :::
 
 ## Summary_row
