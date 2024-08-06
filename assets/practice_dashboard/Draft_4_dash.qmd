@@ -6,8 +6,13 @@ params:
 format: 
   dashboard:
     scrolling: true
+logo: nf-core-plantpathsurveil_logo_light.png
 theme: united
 editor: visual
+bibliography: references.bib
+nocite: |
+  @qin2014proposed, @kurtzer2017singularity, @anaconda
+# adds literature citations that aren't referenced within the report - important when citation isn't associated with a program
 ---
 
 ```{r knitr_settings}
@@ -72,16 +77,29 @@ is_single_taxon <- length(unique_tax) == 1
 core_plots <- core_tree_plot(params$inputs, interactive = FALSE)
 ```
 
+#  {.sidebar}
+
+------------------------------------------------------------------------
+
+This report is produced by the **`nf-core/pathogensurveillance` pipeline**.
+
+-   **Report group:** `r group`
+-   **Sample count:** `r nrow(sample_data)`
+-   **Last updated:** `r format(Sys.time(), '%B %d , %Y')`
+-   **Pipeline version:** {{< var version >}}
+
+------------------------------------------------------------------------
+
+
+
 # Results
 
 ## Row1
 
-### Column 1 
+### Column 1
 
 ::: {.card title="Phylogeny"}
-
-::: {.panel-tabset}
-
+::: panel-tabset
 ## Phylo
 
 This section includes phylogenetic trees of samples with references sequences downloaded from [RefSeq](https://www.ncbi.nlm.nih.gov/refseq/) meant to provide a reliable identification using genome-scale data. The accuracy of this identification depends on the presence of close reference sequences in RefSeq and the accuracy of the initial identification.
@@ -194,28 +212,23 @@ cat('
 Could not generate minimum spanning networks. This is likely due to not having any FASTA SNP alignment inputs.
 ')
 ```
-
 :::
-
 :::
 
 ### Column 2
 
 ::: {.card title="ANI comparisons"}
-
 ```{r ANI_Variables}
 ani_matrix <- estimated_ani_matrix_parsed(params$inputs)[[1]]
 sample_data <- sample_meta_parsed(params$inputs)
 reference_data <- ref_meta_parsed(params$inputs)
 ```
-  
 
-::: {.panel-tabset}
-
+::: panel-tabset
 ## ANI heatmap
 
-```{r ani_heatmap, fig.height = 10}
-make_ani_heatmap(ani_matrix * 100, reference_data, sample_data)
+```{r ani_heatmap}
+make_ani_heatmap(ani_matrix * 100, reference_data, sample_data, height= NULL, width = NULL)
 ```
 
 ::: {.callout-tip collapse="true"}
@@ -224,28 +237,28 @@ make_ani_heatmap(ani_matrix * 100, reference_data, sample_data)
 This plot shows the results of comparing the similarity of all samples and references to each other. These similarity metrics are based on the presence and abundance of short exact sequence matches between samples (i.e. comparisons of k-mer sketches). These measurements are not as reliable as the methods used to create phylogenetic trees, but may be useful if phylogenetic trees could not be inferred for these samples.
 :::
 
-
 ## ANI table
 
 ```{r}
 # Parse ANI matrix
 print_ani_table(ani_matrix * 100, sample_data, reference_data)
 ```
-
-::: 
-
+:::
 :::
 
-## Summary_row
+## Row2
 
-::: {.callout-tip title="Summary" collapse="true"}
-This report is produced by the **`nf-core/pathogensurveillance` pipeline**.
+::: {.card title="Practice Map" .flow}
+This is a practice at getting leaflet to work in my own dashboards.
 
--   **Report group:** `r group`
--   **Sample count:** `r nrow(sample_data)`
--   **Last updated:** `r format(Sys.time(), '%B %d , %Y')`
--   **Pipeline version:** {{< var version >}}
+```{r Practice_map2}
+m <- leaflet() %>%
+  addTiles() %>%  # Add default OpenStreetMap map tiles
+  addMarkers(lng=174.768, lat=-36.852, popup="The birthplace of R")
+m  # Print the map
+```
 :::
+
 
 # About
 
@@ -267,7 +280,20 @@ Di Tommaso, Paolo, Maria Chatzou, Evan W Floden, Pablo Prieto Barja, Emilio Palu
 
 Icons for this report were sampled from [Bootstrap Icons](https://icons.getbootstrap.com), [Freepick](https://www.freepik.com), [Academicons](https://jpswalsh.github.io/academicons/), and [Font Awesome](https://fontawesome.com).
 
-References
+
+## {{< bi gear-wide-connected >}} Analysis software
+
+```{r}
+# Parse version data
+version_data <- software_version_parsed(params$inputs)
+
+# Generate citation list based on contents of version data table, .bib file, and .csv file used to index .bib file with program names
+reflist <- read.csv(file = 'references.csv')
+version_data$citation <- reflist[match(version_data$program, reflist$program), 'citation']
+knitr::kable(version_data)
+```
+
+## Row3
 
 ::: {#refs}
 :::
