@@ -1,3 +1,4 @@
 *.html
 *_files
 packages.bib
+/.quarto/

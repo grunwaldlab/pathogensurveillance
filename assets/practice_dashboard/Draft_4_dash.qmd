@@ -3,14 +3,8 @@ title: "Draft_4_dash"
 author: "Grunwald Lab"
 params:
   inputs: "../main_report/_test_data/xanthomonas/xan_test_inputs"
-format: 
-  dashboard:
-    css: styles.css
-    scrolling: true
 logo: nf-core-plantpathsurveil_logo_light.png
 theme: united
-editor: visual
-bibliography: references.bib
 nocite: |
   @qin2014proposed, @kurtzer2017singularity, @anaconda
 # adds literature citations that aren't referenced within the report - important when citation isn't associated with a program
