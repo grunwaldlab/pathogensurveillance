@@ -1,0 +1,8 @@
+format: 
+  dashboard:
+    css: styles.css
+    scrolling: true
+    self-contained: true
+    embed-resources: true
+    
+bibliography: references.bib
