@@ -1,0 +1,3 @@
+sample_id,name,ncbi_accession,path,path_2,report_group_ids,host,field,source,color_by,enabled,ref_group_ids,sequence_type
+SRA4149292,SRR4149292,,,,species_group_1,Lespedera_cuneata,China,sra,host;field;source,TRUE,GCF_025200905,illumina
+SRA4149292,SRR4149292,,,,species_group_1_joel,Lespedera_cuneata,China,sra,host;field;source,TRUE,joel_ref,illumina
