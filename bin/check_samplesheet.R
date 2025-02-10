@@ -38,6 +38,9 @@ known_columns_samp <- c(
     'color_by',
     'ploidy',
     'enabled',
+    'latitude',
+    'longitude',
+    'location',
     'ref_group_ids',
     'ref_id',
     'ref_name',
@@ -63,7 +66,10 @@ known_columns_ref <- c(
     'ref_primary_usage',
     'ref_contextual_usage',
     'ref_color_by',
-    'ref_enabled'
+    'ref_enabled',
+    'ref_latitude',
+    'ref_longitude',
+    'ref_location'
 )
 
 # Default values for columns
@@ -971,6 +977,60 @@ if (sum(invalid_seq_type) > 0) {
     ))
 }
 
+# Validate sample latitude and longitude columns
+can_be_numeric <- function(values) {
+    ! suppressWarnings(is.na(as.numeric(as.character(values))))
+}
+is_valid_lat <- function(values) {
+    vapply(values, FUN.VALUE = logical(1), function(x) {
+        ! is_present(x) || (can_be_numeric(x) && as.numeric(x) >= -90 && as.numeric(x) <= 90)
+    })
+}
+is_valid_long <- function(values) {
+    vapply(values, FUN.VALUE = logical(1), function(x) {
+        ! is_present(x) || (can_be_numeric(x) && as.numeric(x) >= -180 && as.numeric(x) <= 180)
+    })
+}
+is_invalid_lat <- ! is_valid_lat(metadata_samp$latitude)
+is_invalid_long <- ! is_valid_lat(metadata_samp$latitude)
+
+# Report invalid sample latitude and longitude values to the user
+invalid_lat_long_samps <- metadata_samp$sample_id[is_invalid_lat | is_invalid_long]
+if (length(invalid_lat_long_samps) > 0) {
+    warning('The following ', length(invalid_lat_long_samps), ' samples do not have valid values for the `latitude` or `longitude` columns:\n',
+            paste0('    ', invalid_lat_long_samps, collapse = '\n'), '\n')
+    message_data <- rbind(message_data, data.frame(
+        sample_id = metadata_samp$sample_id[metadata_samp$sample_id %in% invalid_lat_long_samps],
+        report_group_id = metadata_samp$report_group_ids[metadata_samp$sample_id %in% invalid_lat_long_samps],
+        reference_id = NA_character_,
+        workflow = 'PREPARE_INPUT',
+        message_type = 'WARNING',
+        description = 'Samples do not have valid values for the `latitude` or `longitude` columns.'
+    ))
+    metadata_samp$latitude[invalid_lat_long_samps] <- NA
+    metadata_samp$longitude[invalid_lat_long_samps] <- NA
+}
+
+# Validate sample latitude and longitude columns
+is_invalid_lat <- ! is_valid_lat(metadata_ref$ref_latitude)
+is_invalid_long <- ! is_valid_lat(metadata_ref$ref_latitude)
+
+# Report invalid reference latitude and longitude values to the user
+invalid_lat_long_refs <- metadata_ref$ref_id[is_invalid_lat | is_invalid_long]
+if (length(invalid_lat_long_refs) > 0) {
+    warning('The following ', length(invalid_lat_long_refs), ' references do not have valid values for the `latitude` or `longitude` columns:\n',
+            paste0('    ', invalid_lat_long_refs, collapse = '\n'), '\n')
+    message_data <- rbind(message_data, data.frame(
+        sample_id = NA_character_,
+        report_group_id = NA_character_,
+        reference_id = metadata_ref$ref_id[metadata_ref$ref_id %in% invalid_lat_long_refs],
+        workflow = 'PREPARE_INPUT',
+        message_type = 'WARNING',
+        description = 'References do not have valid values for the `latitude` or `longitude` columns.'
+    ))
+    metadata_ref$ref_latitude[invalid_lat_long_refs] <- NA
+    metadata_ref$ref_longitude[invalid_lat_long_refs] <- NA
+}
 
 # Add row for each group for samples/references with multiple groups
 duplicate_rows_by_id_list <- function(metadata, id_col) {
