@@ -160,7 +160,7 @@ args <- as.list(args)
 # args <- list('/home/fosterz/projects/pathogensurveillance/tests/data/metadata/salmonella_sample_data_val_N566.csv', '/home/fosterz/projects/pathogensurveillance/tests/data/metadata/salmonella_ref_data_val.csv')
 # args <- list("/home/fosterz/projects/pathogensurveillance/tests/data/metadata/small_genome.csv")
 # args <- list("/home/fosterz/projects/pathogensurveillance/tests/data/metadata/serratia_N664.csv", '/home/fosterz/projects/pathogensurveillance/tests/data/metadata/serratia_N664_ref_data.csv')
-args <- list("/home/fosterz/projects/pathogensurveillance/tests/data/metadata/mixed_bacteria.csv", '/home/fosterz/projects/pathogensurveillance/tests/data/metadata/mixed_references.csv')
+# args <- list("/home/fosterz/projects/pathogensurveillance/tests/data/metadata/mixed_bacteria.csv", '/home/fosterz/projects/pathogensurveillance/tests/data/metadata/mixed_references.csv')
 
 metadata_original_samp <- read.csv(args[[1]], check.names = FALSE)
 if (length(args) > 1) {
@@ -966,7 +966,7 @@ if (sum(invalid_seq_type) > 0) {
     ))
 }
 
-# Parse location column
+# Define functions use to manipulate locations and coordinates
 is_coordinate <- function(text) {
     grepl(text, pattern = '^[NSWE0-9,.°"”\' -]+$')
 }
@@ -1024,37 +1024,6 @@ convert_coord_to_decimal_degrees <- function(coord_text) {
         paste0(x, collapse = ', ')
     })
 }
-loc_is_coord <- is_coordinate(metadata_samp$location)
-metadata_samp$location[loc_is_coord] <- convert_coord_to_decimal_degrees(metadata_samp$location[loc_is_coord])
-loc_is_address <- ! loc_is_coord & is_present(metadata_samp$location)
-location_data <- tidygeocoder::geo(address = metadata_samp$location[loc_is_address])
-location_data <- unique(location_data[ !is.na(location_data$lat), , drop = FALSE])
-
-# Parse latitude and longitude columns
-metadata_samp$latitude <- convert_coord_part_to_decimal_degrees(metadata_samp$latitude)
-metadata_samp$longitude <- convert_coord_part_to_decimal_degrees(metadata_samp$longitude)
-
-# Use data from the location if latitude and longitude columns are missing values
-missing_long_lat <- ! is_present(metadata_samp$latitude) | ! is_present(metadata_samp$longitude)
-replace_with_coord_loc <- loc_is_coord & missing_long_lat
-split_loc <- strsplit(metadata_samp$location, split = ', ')
-metadata_samp$latitude[replace_with_coord_loc] <- vapply(split_loc[replace_with_coord_loc] , FUN.VALUE = numeric(1), function(x) {
-    as.numeric(x[1])
-})
-metadata_samp$longitude[replace_with_coord_loc] <- vapply(split_loc[replace_with_coord_loc] , FUN.VALUE = numeric(1), function(x) {
-    as.numeric(x[2])
-})
-replace_with_lookup_loc <- missing_long_lat & metadata_samp$location %in% location_data$address
-metadata_samp$latitude[replace_with_lookup_loc] <- vapply(metadata_samp$location[replace_with_lookup_loc], FUN.VALUE = numeric(1), function(x) {
-    location_data$lat[location_data$address == x]
-})
-metadata_samp$longitude[replace_with_lookup_loc] <- vapply(metadata_samp$location[replace_with_lookup_loc], FUN.VALUE = numeric(1), function(x) {
-    location_data$long[location_data$address == x]
-})
-
-
-
-# Validate sample latitude and longitude columns
 can_be_numeric <- function(values) {
     ! suppressWarnings(is.na(as.numeric(as.character(values))))
 }
@@ -1068,32 +1037,71 @@ is_valid_long <- function(values) {
         ! is_present(x) || (can_be_numeric(x) && as.numeric(x) >= -180 && as.numeric(x) <= 180)
     })
 }
-is_invalid_lat <- ! is_valid_lat(metadata_samp$latitude)
-is_invalid_long <- ! is_valid_lat(metadata_samp$latitude)
 
-# Report invalid sample latitude and longitude values to the user
-invalid_lat_long_samps <- metadata_samp$sample_id[is_invalid_lat | is_invalid_long]
+# Parse and validate location and coordinate data
+parse_location_and_coord_data <- function(table, lat_col, long_col, loc_col) {
+    # Parse location, latitude, and longitude columns
+    loc_is_coord <- is_coordinate(table[[loc_col]]) & is_present(table[[loc_col]])
+    table[loc_is_coord, loc_col] <- convert_coord_to_decimal_degrees(table[loc_is_coord, loc_col])
+    loc_is_address <- ! loc_is_coord & is_present(table[[loc_col]])
+    location_data <- tidygeocoder::geo(address = table[loc_is_address, loc_col])
+    location_data <- unique(location_data[! is.na(location_data$lat), , drop = FALSE])
+    table[[lat_col]] <- convert_coord_part_to_decimal_degrees(table[[lat_col]])
+    table[[long_col]] <- convert_coord_part_to_decimal_degrees(table[[long_col]])
+    
+    # Use data from the location if latitude and longitude columns are missing values
+    missing_long_lat <- ! is_present(table[[lat_col]]) | ! is_present(table[[long_col]])
+    replace_with_coord_loc <- loc_is_coord & missing_long_lat 
+    split_loc <- strsplit(table[[loc_col]], split = ', ')
+    table[replace_with_coord_loc, lat_col] <- vapply(split_loc[replace_with_coord_loc], FUN.VALUE = numeric(1), function(x) {
+        as.numeric(x[1])
+    })
+    table[replace_with_coord_loc, long_col] <- vapply(split_loc[replace_with_coord_loc], FUN.VALUE = numeric(1), function(x) {
+        as.numeric(x[2])
+    })
+    replace_with_lookup_loc <- missing_long_lat & table[[loc_col]] %in% location_data$address
+    table[replace_with_lookup_loc, lat_col] <- vapply(table[replace_with_lookup_loc, loc_col], FUN.VALUE = numeric(1), function(x) {
+        location_data$lat[location_data$address == x]
+    })
+    table[replace_with_lookup_loc, long_col] <- vapply(table[replace_with_lookup_loc, loc_col], FUN.VALUE = numeric(1), function(x) {
+        location_data$long[location_data$address == x]
+    })
+    
+    # Validate sample latitude and longitude columns
+    is_invalid_lat <- ! is_valid_lat(table[[lat_col]])
+    is_invalid_long <- ! is_valid_long(table[[long_col]])
+    is_invalid_coord <- is_invalid_lat | is_invalid_long
+    table[is_invalid_coord, lat_col] <- NA
+    table[is_invalid_coord, long_col] <- NA
+    
+    # Infer location from latitude and longitude
+    loc_to_lookup <- is_present(table[[lat_col]]) & is_present(table[[long_col]])
+    place_data <- tidygeocoder::reverse_geo(lat = table[loc_to_lookup, lat_col], long = table[loc_to_lookup, long_col],
+                                            full_results = TRUE, custom_query = list("accept-language" = "en-US"))
+    table[loc_to_lookup, loc_col] <- place_data$address
+    
+    return(list(table = table, is_invalid_coord = is_invalid_coord))
+}
+coord_results_samp <- parse_location_and_coord_data(metadata_samp, lat_col = 'latitude', long_col = 'longitude', loc_col = 'location')
+metadata_samp <- coord_results_samp$table
+coord_results_ref <- parse_location_and_coord_data(metadata_ref, lat_col = 'ref_latitude', long_col = 'ref_longitude', loc_col = 'ref_location')
+metadata_ref <- coord_results_ref$table
+
+# Report problems with parsing coordinates to user
+invalid_lat_long_samps <- metadata_samp$sample_id[coord_results_samp$is_invalid_coord]
 if (length(invalid_lat_long_samps) > 0) {
     warning('The following ', length(invalid_lat_long_samps), ' samples do not have valid values for the `latitude` or `longitude` columns:\n',
             paste0('    ', invalid_lat_long_samps, collapse = '\n'), '\n')
-    message_data <- rbind(message_data, data.frame(
-        sample_id = metadata_samp$sample_id[metadata_samp$sample_id %in% invalid_lat_long_samps],
-        report_group_id = metadata_samp$report_group_ids[metadata_samp$sample_id %in% invalid_lat_long_samps],
+    message_data <- data.frame(
+        sample_id = table$sample_id[table$sample_id %in% invalid_lat_long_samps],
+        report_group_id = table$report_group_ids[table$sample_id %in% invalid_lat_long_samps],
         reference_id = NA_character_,
         workflow = 'PREPARE_INPUT',
         message_type = 'WARNING',
         description = 'Samples do not have valid values for the `latitude` or `longitude` columns.'
-    ))
-    metadata_samp$latitude[invalid_lat_long_samps] <- NA
-    metadata_samp$longitude[invalid_lat_long_samps] <- NA
+    )
 }
-
-# Validate sample latitude and longitude columns
-is_invalid_lat <- ! is_valid_lat(metadata_ref$ref_latitude)
-is_invalid_long <- ! is_valid_lat(metadata_ref$ref_latitude)
-
-# Report invalid reference latitude and longitude values to the user
-invalid_lat_long_refs <- metadata_ref$ref_id[is_invalid_lat | is_invalid_long]
+invalid_lat_long_refs <- metadata_ref$ref_id[coord_results_ref$is_invalid_coord]
 if (length(invalid_lat_long_refs) > 0) {
     warning('The following ', length(invalid_lat_long_refs), ' references do not have valid values for the `latitude` or `longitude` columns:\n',
             paste0('    ', invalid_lat_long_refs, collapse = '\n'), '\n')
@@ -1105,8 +1113,6 @@ if (length(invalid_lat_long_refs) > 0) {
         message_type = 'WARNING',
         description = 'References do not have valid values for the `latitude` or `longitude` columns.'
     ))
-    metadata_ref$ref_latitude[invalid_lat_long_refs] <- NA
-    metadata_ref$ref_longitude[invalid_lat_long_refs] <- NA
 }
 
 # Add row for each group for samples/references with multiple groups
