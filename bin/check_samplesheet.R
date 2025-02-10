@@ -48,7 +48,10 @@ known_columns_samp <- c(
     'ref_primary_usage',
     'ref_contextual_usage',
     'ref_color_by',
-    'ref_enabled'
+    'ref_enabled',
+    'ref_latitude',
+    'ref_longitude',
+    'ref_location'
 )
 known_columns_ref <- c(
     'ref_group_ids',
@@ -156,8 +159,8 @@ args <- as.list(args)
 # args <- list('~/downloads/sample_data_N664_true.csv')
 # args <- list('/home/fosterz/projects/pathogensurveillance/tests/data/metadata/salmonella_sample_data_val_N566.csv', '/home/fosterz/projects/pathogensurveillance/tests/data/metadata/salmonella_ref_data_val.csv')
 # args <- list("/home/fosterz/projects/pathogensurveillance/tests/data/metadata/small_genome.csv")
-args <- list("/home/fosterz/projects/pathogensurveillance/tests/data/metadata/serratia_N664.csv", '/home/fosterz/projects/pathogensurveillance/tests/data/metadata/serratia_N664_ref_data.csv')
-# args <- list("/home/fosterz/projects/pathogensurveillance/tests/data/metadata/mixed_bacteria.csv", '/home/fosterz/projects/pathogensurveillance/tests/data/metadata/mixed_references.csv')
+# args <- list("/home/fosterz/projects/pathogensurveillance/tests/data/metadata/serratia_N664.csv", '/home/fosterz/projects/pathogensurveillance/tests/data/metadata/serratia_N664_ref_data.csv')
+args <- list("/home/fosterz/projects/pathogensurveillance/tests/data/metadata/mixed_bacteria.csv", '/home/fosterz/projects/pathogensurveillance/tests/data/metadata/mixed_references.csv')
 
 metadata_original_samp <- read.csv(args[[1]], check.names = FALSE)
 if (length(args) > 1) {
@@ -364,8 +367,7 @@ if (nrow(metadata_ref) > 0) {
 # Move reference data from the sample metadata to the reference metadata
 ref_in_samp_data <- metadata_samp[, known_columns_ref]
 has_ref_data <- apply(ref_in_samp_data[, unlist(required_input_columns_ref)], MARGIN = 1, function(x) any(is_present(x)))
-
-    needs_new_ref_id <- has_ref_data & (ref_in_samp_data$ref_id == '' | is.na(ref_in_samp_data$ref_id == ''))
+needs_new_ref_id <- has_ref_data & (ref_in_samp_data$ref_id == '' | is.na(ref_in_samp_data$ref_id == ''))
 ref_group_id_proxy <- apply(metadata_samp[needs_new_ref_id, unlist(required_input_columns_ref), drop = FALSE], MARGIN = 1, FUN = paste, collapse = "")
 new_ref_group_ids <- paste0('_ref_group_', as.numeric(factor(ref_group_id_proxy)))
 ref_in_samp_data$ref_group_ids[needs_new_ref_id] <- new_ref_group_ids
@@ -963,6 +965,94 @@ if (sum(invalid_seq_type) > 0) {
         description = paste0('Invalid, missing, multiple, or undeterminable sequence type(s). Must be one of: ', paste0('"', known_read_types, '"', collapse = ', '))
     ))
 }
+
+# Parse location column
+is_coordinate <- function(text) {
+    grepl(text, pattern = '^[NSWE0-9,.°"”\' -]+$')
+}
+split_coord <- function(text) {
+    split_text <- strsplit(trimws(text), split = '[, ]+')
+    lengths <- vapply(split_text, length, FUN.VALUE = numeric(1))
+    is_odd <- lengths %% 2 != 0
+    if (any(is_odd)) {
+        warning('Could not split coordinates into equal parts. Replaceing with NA.')
+        split_text[is_odd] <- rep(list(c(NA_character_, NA_character_)), sum(is_odd))
+    }
+    lapply(split_text, function(x) {
+        c(
+            paste0(x[1:(length(x) / 2)], collapse = ''),
+            paste0(x[((length(x) / 2) + 1):length(x)], collapse = '')
+        )
+    })
+}
+convert_coord_part_to_decimal_degrees <- function(coord_parts) {
+    vapply(coord_parts, FUN.VALUE = numeric(1), function(coord_part) {
+        if (is.na(coord_part) | coord_part == '') {
+            return(as.numeric(coord_part))
+        }
+        coord_part <- trimws(coord_part)
+        is_negative <- grepl(coord_part, pattern = '[SW-]+')
+        coord_part <- gsub(coord_part, pattern = '[NWSE-]+', replacement = '')
+        coord_part <- gsub(coord_part, pattern = '”', replacement = '"')
+        coord_part <- gsub(coord_part, pattern = "''", replacement = '"')
+        if (grepl(coord_part, pattern = '^[0-9.]+$')) {
+            output <- as.numeric(coord_part)
+        } else if (grepl(coord_part, pattern = "^[0-9]{1,3}°[0-9.]+'$")) {
+            subparts <- strsplit(coord_part, split = '°')[[1]]
+            degrees <- as.numeric(subparts[1])
+            minutes <- as.numeric(gsub(subparts[2], pattern = "'", replacement = ''))
+            output <- degrees + minutes / 60
+        } else if (grepl(coord_part, pattern = "^[0-9]{1,3}°[0-9.]+'[0-9.]+\"$")) {
+            subparts <- strsplit(coord_part, split = "[°']")[[1]]
+            degrees <- as.numeric(subparts[1])
+            minutes <- as.numeric(subparts[2])
+            seconds <- as.numeric(gsub(subparts[3], pattern = '"', replacement = ''))
+            output <- degrees + minutes / 60 + minutes / 3600
+        }
+        if (is_negative) {
+            output <- output * -1
+        }
+        return(output)
+    })
+}
+convert_coord_to_decimal_degrees <- function(coord_text) {
+    parts <- lapply(split_coord(coord_text), convert_coord_part_to_decimal_degrees)
+    vapply(parts, FUN.VALUE = character(1), function(x) {
+        if (any(is.na(x))) {
+            return(NA_character_)
+        }
+        paste0(x, collapse = ', ')
+    })
+}
+loc_is_coord <- is_coordinate(metadata_samp$location)
+metadata_samp$location[loc_is_coord] <- convert_coord_to_decimal_degrees(metadata_samp$location[loc_is_coord])
+loc_is_address <- ! loc_is_coord & is_present(metadata_samp$location)
+location_data <- tidygeocoder::geo(address = metadata_samp$location[loc_is_address])
+location_data <- unique(location_data[ !is.na(location_data$lat), , drop = FALSE])
+
+# Parse latitude and longitude columns
+metadata_samp$latitude <- convert_coord_part_to_decimal_degrees(metadata_samp$latitude)
+metadata_samp$longitude <- convert_coord_part_to_decimal_degrees(metadata_samp$longitude)
+
+# Use data from the location if latitude and longitude columns are missing values
+missing_long_lat <- ! is_present(metadata_samp$latitude) | ! is_present(metadata_samp$longitude)
+replace_with_coord_loc <- loc_is_coord & missing_long_lat
+split_loc <- strsplit(metadata_samp$location, split = ', ')
+metadata_samp$latitude[replace_with_coord_loc] <- vapply(split_loc[replace_with_coord_loc] , FUN.VALUE = numeric(1), function(x) {
+    as.numeric(x[1])
+})
+metadata_samp$longitude[replace_with_coord_loc] <- vapply(split_loc[replace_with_coord_loc] , FUN.VALUE = numeric(1), function(x) {
+    as.numeric(x[2])
+})
+replace_with_lookup_loc <- missing_long_lat & metadata_samp$location %in% location_data$address
+metadata_samp$latitude[replace_with_lookup_loc] <- vapply(metadata_samp$location[replace_with_lookup_loc], FUN.VALUE = numeric(1), function(x) {
+    location_data$lat[location_data$address == x]
+})
+metadata_samp$longitude[replace_with_lookup_loc] <- vapply(metadata_samp$location[replace_with_lookup_loc], FUN.VALUE = numeric(1), function(x) {
+    location_data$long[location_data$address == x]
+})
+
+
 
 # Validate sample latitude and longitude columns
 can_be_numeric <- function(values) {

@@ -2,36 +2,36 @@ sample_id,name,ncbi_accession,color_by,species,report_group_ids,report_group_ids
 SAMEA882278,K. pneumoniae,ERR024824,species,Klebsiella pneumoniae,all,all;k_pneumoniae,TRUE,"44.57242199274744, -123.24597493258212",,
 SAMEA882280,K. pneumoniae,ERR024826,species,Klebsiella pneumoniae,all,all;k_pneumoniae,TRUE,"44.573665628438384, -123.23928886852318",,
 SAMEA882273,K. pneumoniae,ERR024827,species,Klebsiella pneumoniae,all,all;k_pneumoniae,TRUE,"44.56694438714396, -123.25117520462796",,
-SAMEA882272,K. pneumoniae,ERR024828,species,Klebsiella pneumoniae,all,all;k_pneumoniae,TRUE,"44.567182554636176, -123.23278852846586",,
-SAMEA882001,K. pneumoniae,ERR024818,species,Klebsiella pneumoniae,all,all;k_pneumoniae,TRUE,"44.56440387321666, -123.24359766536118",,
-SAMEA882289,K. pneumoniae,ERR025525,species,Klebsiella pneumoniae,all,all;k_pneumoniae,TRUE,"44.55932251250582, -123.2281082836246",,
-SAMEA882027,K. pneumoniae,ERR025517,species,Klebsiella pneumoniae,all,all;k_pneumoniae,TRUE,"44.56072522413127, -123.22495097559676",,
-SAMEA882286,K. pneumoniae,ERR025524,species,Klebsiella pneumoniae,all,all;k_pneumoniae,TRUE,"44.57586177119683, -123.22632533320888",,
-SAMEA882291,K. pneumoniae,ERR025516,species,Klebsiella pneumoniae,all,all;k_pneumoniae,TRUE,"44.563107109769234, -123.25470396125259",,
-SAMEA882288,K. pneumoniae,ERR025515,species,Klebsiella pneumoniae,all,all;k_pneumoniae,TRUE,"44.555299453745164, -123.2418890046144",,
-SAMN11100996,M. abscessus,SRR12574846,species,Mycobacteroides abscessus,all,all;m_abscessus,TRUE,"1001-1141 NW 34th St, Corvallis, OR 97330",,
-SAMN11100995,M. abscessus,SRR12574847,species,Mycobacteroides abscessus,all,all;m_abscessus,TRUE,"2951-2999 NW Taylor Ave, Corvallis, OR 97330",,
-SAMN11100994,M. abscessus,SRR12574848,species,Mycobacteroides abscessus,all,all;m_abscessus,TRUE,"1701-1817 NW 29th St, Corvallis, OR 97330",,
-SAMN11100993,M. abscessus,SRR12574849,species,Mycobacteroides abscessus,all,all;m_abscessus,TRUE,"2576-2400 NW 27th St, Corvallis, OR 97330",,
-SAMEA3880302,N. meningitidis,ERR1556258,species,Neisseria meningitidis,all,all;n_meningitidis,TRUE,,45.467310577444,-123.838141680669
-SAMEA3880305,N. meningitidis,ERR1556259,species,Neisseria meningitidis,all,all;n_meningitidis,TRUE,,45.4432808255067,-123.828403212033
+SAMEA882272,K. pneumoniae,ERR024828,species,Klebsiella pneumoniae,all,all;k_pneumoniae,TRUE,"N 44° 34' 1.857”, W 123° 13' 58.038”",,
+SAMEA882001,K. pneumoniae,ERR024818,species,Klebsiella pneumoniae,all,all;k_pneumoniae,TRUE,44°34'1.858''N 123°13'58.039''W,,
+SAMEA882289,K. pneumoniae,ERR025525,species,Klebsiella pneumoniae,all,all;k_pneumoniae,TRUE,"N44°34'1.8583'', W123°13'58.0372''",,
+SAMEA882027,K. pneumoniae,ERR025517,species,Klebsiella pneumoniae,all,all;k_pneumoniae,TRUE,"44°34'1.859”N, 123°13'58.0395”W",,
+SAMEA882286,K. pneumoniae,ERR025524,species,Klebsiella pneumoniae,all,all;k_pneumoniae,TRUE,"44°34'1.859''N, 123°13'58.0395''W",,
+SAMEA882291,K. pneumoniae,ERR025516,species,Klebsiella pneumoniae,all,all;k_pneumoniae,TRUE,"44°34.0309133'N, 123°13.967355'W",,
+SAMEA882288,K. pneumoniae,ERR025515,species,Klebsiella pneumoniae,all,all;k_pneumoniae,TRUE,N44°34.0309133' W123°13.967355',,
+SAMN11100996,M. abscessus,SRR12574846,species,Mycobacteroides abscessus,all,all;m_abscessus,TRUE,"1141 NW 34th St, Corvallis, OR 97330",,
+SAMN11100995,M. abscessus,SRR12574847,species,Mycobacteroides abscessus,all,all;m_abscessus,TRUE,"2999 NW Taylor Ave, Corvallis, OR 97330",,
+SAMN11100994,M. abscessus,SRR12574848,species,Mycobacteroides abscessus,all,all;m_abscessus,TRUE,"1817 NW 29th St, Corvallis, OR 97330",,
+SAMN11100993,M. abscessus,SRR12574849,species,Mycobacteroides abscessus,all,all;m_abscessus,TRUE,"2400 NW 27th St, Corvallis, OR 97330",,
+SAMEA3880302,N. meningitidis,ERR1556258,species,Neisseria meningitidis,all,all;n_meningitidis,TRUE,"2400 NW 27th St, Corvallis, OR 97330",45.467310577444,-123.838141680669
+SAMEA3880305,N. meningitidis,ERR1556259,species,Neisseria meningitidis,all,all;n_meningitidis,TRUE,"2400 NW 27th St, Corvallis, OR 97330",45.4432808255067,-123.828403212033
 SAMEA3880307,N. meningitidis,ERR1556260,species,Neisseria meningitidis,all,all;n_meningitidis,TRUE,,45.4521223930175,-123.852233817859
 SAMEA3880319,N. meningitidis,ERR1556266,species,Neisseria meningitidis,all,all;n_meningitidis,TRUE,,45.487635447155,-123.773867784963
 SAMEA3880327,N. meningitidis,ERR1556270,species,Neisseria meningitidis,all,all;n_meningitidis,TRUE,,45.4661053155534,-123.764014745536
 SAMEA3880334,N. meningitidis,ERR1556274,species,Neisseria meningitidis,all,all;n_meningitidis,TRUE,,45.4571052115607,-123.720592629599
 SAMEA3880346,N. meningitidis,ERR1556281,species,Neisseria meningitidis,all,all;n_meningitidis,TRUE,,45.3968313279087,-123.779715379296
-SAMEA3880351,N. meningitidis,ERR1556284,species,Neisseria meningitidis,all,all;n_meningitidis,TRUE,,,
-SAMEA3880355,N. meningitidis,ERR1556286,species,Neisseria meningitidis,all,all;n_meningitidis,TRUE,,,
-SAMEA3880356,N. meningitidis,ERR1556287,species,Neisseria meningitidis,all,all;n_meningitidis,TRUE,,,
-SAMEA3880360,N. meningitidis,ERR1556289,species,Neisseria meningitidis,all,all;n_meningitidis,TRUE,,,
+SAMEA3880351,N. meningitidis,ERR1556284,species,Neisseria meningitidis,all,all;n_meningitidis,TRUE,,45°23.80998',-123°46.78297'
+SAMEA3880355,N. meningitidis,ERR1556286,species,Neisseria meningitidis,all,all;n_meningitidis,TRUE,,"45°23'48.5926""","-123°46'46.9751"""
+SAMEA3880356,N. meningitidis,ERR1556287,species,Neisseria meningitidis,all,all;n_meningitidis,TRUE,,N45°23.80993',W123°46.78296'
+SAMEA3880360,N. meningitidis,ERR1556289,species,Neisseria meningitidis,all,all;n_meningitidis,TRUE,,"45°23'48.5928""N","123°46'46.9752""W"
 SAMEA3880362,N. meningitidis,ERR1556290,species,Neisseria meningitidis,all,all;n_meningitidis,TRUE,,,
 SAMEA3880369,N. meningitidis,ERR1556294,species,Neisseria meningitidis,all,all;n_meningitidis,TRUE,,,
 SAMEA3880384,N. meningitidis,ERR1556303,species,Neisseria meningitidis,all,all;n_meningitidis,TRUE,,,
 SAMEA3880387,N. meningitidis,ERR1556305,species,Neisseria meningitidis,all,all;n_meningitidis,TRUE,,,
 SAMEA3880389,N. meningitidis,ERR1556306,species,Neisseria meningitidis,all,all;n_meningitidis,TRUE,,,
 SRR12888961,X. perforans,SRR12888961,species,Xanthomonas perforans,all,all;x_perforans,TRUE,"Monmouth, OR 97361",,
-SRR12888960,X. perforans,SRR12888960,species,Xanthomonas perforans,all,all;x_perforans,TRUE,"440-356 Cherrywood Dr, Monmouth, OR 97361",,
-SRR12888760,X. perforans,SRR12888760,species,Xanthomonas perforans,all,all;x_perforans,TRUE,"5184-4754 Riddell Rd, Monmouth, OR 97361",,
+SRR12888960,X. perforans,SRR12888960,species,Xanthomonas perforans,all,all;x_perforans,TRUE,"356 Cherrywood Dr, Monmouth, OR 97361",,
+SRR12888760,X. perforans,SRR12888760,species,Xanthomonas perforans,all,all;x_perforans,TRUE,"4754 Riddell Rd, Monmouth, OR 97361",,
 SRR27897033,A. tumefaciens,SRR27897033,species,Agrobacterium tumefaciens,all,all,TRUE,"Salem, Oregon",,
 SRR11174029,R. rhizogenes,SRR11174029,species,Rhizobium rhizogenes,all,all,TRUE,"McMinnville, Oregon, USA",,
 SRR11174116,R. rhizogenes,SRR11174116,species,Rhizobium rhizogenes,all,all,TRUE,"Portland, Oregon, USA",,
