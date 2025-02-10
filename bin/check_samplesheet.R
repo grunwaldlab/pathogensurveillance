@@ -162,6 +162,8 @@ args <- as.list(args)
 # args <- list("/home/fosterz/projects/pathogensurveillance/tests/data/metadata/small_genome.csv")
 # args <- list("/home/fosterz/projects/pathogensurveillance/tests/data/metadata/serratia_N664.csv", '/home/fosterz/projects/pathogensurveillance/tests/data/metadata/serratia_N664_ref_data.csv')
 # args <- list("/home/fosterz/projects/pathogensurveillance/tests/data/metadata/mycobacteroides_small.tsv")
+args <- list("/home/fosterz/projects/pathogensurveillance/tests/data/metadata/serratia_N664.csv", '/home/fosterz/projects/pathogensurveillance/tests/data/metadata/serratia_N664_ref_data.csv')
+# args <- list("/home/fosterz/projects/pathogensurveillance/tests/data/metadata/mixed_bacteria.csv", '/home/fosterz/projects/pathogensurveillance/tests/data/metadata/mixed_references.csv')
 
 read_input_table <- function(path) {
     if (endsWith(path, '.csv')) {
@@ -362,7 +364,7 @@ if (nrow(metadata_ref) > 0) {
 ref_in_samp_data <- metadata_samp[, known_columns_ref]
 has_ref_data <- apply(ref_in_samp_data[, unlist(required_input_columns_ref)], MARGIN = 1, function(x) any(is_present(x)))
 
-needs_new_ref_id <- has_ref_data & (ref_in_samp_data$ref_id == '' | is.na(ref_in_samp_data$ref_id == ''))
+    needs_new_ref_id <- has_ref_data & (ref_in_samp_data$ref_id == '' | is.na(ref_in_samp_data$ref_id == ''))
 ref_group_id_proxy <- apply(metadata_samp[needs_new_ref_id, unlist(required_input_columns_ref), drop = FALSE], MARGIN = 1, FUN = paste, collapse = "")
 new_ref_group_ids <- paste0('_ref_group_', as.numeric(factor(ref_group_id_proxy)))
 ref_in_samp_data$ref_group_ids[needs_new_ref_id] <- new_ref_group_ids
