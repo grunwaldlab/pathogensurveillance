@@ -1,3 +1,6 @@
+# Build with:
+# docker buildx build -t zacharyfoster/main-report-r-packages:<put verison number here> .
+
 ################## BASE IMAGE ######################
 
 FROM eddelbuettel/r2u:22.04
@@ -79,7 +82,7 @@ EOF
 
 RUN <<EOF
 install.r devtools
-Rscript -e 'devtools::install_github("grunwaldlab/psminer@0842e6ff2bbaa2097b756741d2ba17c23991afdf")'
+Rscript -e 'devtools::install_github("grunwaldlab/psminer@d2719684458bbf7e2866218930778f97258b1c92")'
 EOF
 
 USER root
