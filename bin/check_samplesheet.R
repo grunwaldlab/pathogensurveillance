@@ -164,7 +164,7 @@ args <- as.list(args)
 # args <- list('/home/fosterz/projects/pathogensurveillance/tests/data/metadata/salmonella_sample_data_val_N566.csv', '/home/fosterz/projects/pathogensurveillance/tests/data/metadata/salmonella_ref_data_val.csv')
 # args <- list("/home/fosterz/projects/pathogensurveillance/tests/data/metadata/small_genome.csv")
 # args <- list("/home/fosterz/projects/pathogensurveillance/tests/data/metadata/serratia_N664.csv", '/home/fosterz/projects/pathogensurveillance/tests/data/metadata/serratia_N664_ref_data.csv')
-# args <- list("/home/fosterz/projects/pathogensurveillance/tests/data/metadata/mixed_bacteria.csv", '/home/fosterz/projects/pathogensurveillance/tests/data/metadata/mixed_references.csv')
+args <- list("/home/fosterz/projects/pathogensurveillance/tests/data/metadata/mixed_bacteria.csv", '/home/fosterz/projects/pathogensurveillance/tests/data/metadata/mixed_references.csv')
 # args <- list("/home/fosterz/projects/pathogensurveillance/tests/data/metadata/mycobacteroides_small.tsv")
 
 read_input_table <- function(path) {
@@ -1021,7 +1021,7 @@ convert_coord_part_to_decimal_degrees <- function(coord_parts) {
             degrees <- as.numeric(subparts[1])
             minutes <- as.numeric(subparts[2])
             seconds <- as.numeric(gsub(subparts[3], pattern = '"', replacement = ''))
-            output <- degrees + minutes / 60 + minutes / 3600
+            output <- degrees + minutes / 60 + seconds / 3600
         }
         if (is_negative) {
             output <- output * -1
@@ -1061,7 +1061,9 @@ parse_location_and_coord_data <- function(table, lat_col, long_col, loc_col) {
     loc_is_coord <- is_coordinate(table[[loc_col]]) & is_present(table[[loc_col]])
     table[loc_is_coord, loc_col] <- convert_coord_to_decimal_degrees(table[loc_is_coord, loc_col])
     loc_is_address <- ! loc_is_coord & is_present(table[[loc_col]])
-    location_data <- tidygeocoder::geo(address = table[loc_is_address, loc_col])
+    location_data <- tidygeocoder::geo(address = table[loc_is_address, loc_col],
+                                       full_results = TRUE, progress_bar = FALSE,
+                                       custom_query = list("accept-language" = "en-US"))
     location_data <- unique(location_data[! is.na(location_data$lat), , drop = FALSE])
     table[[lat_col]] <- convert_coord_part_to_decimal_degrees(table[[lat_col]])
     table[[long_col]] <- convert_coord_part_to_decimal_degrees(table[[long_col]])
@@ -1084,35 +1086,17 @@ parse_location_and_coord_data <- function(table, lat_col, long_col, loc_col) {
         location_data$long[location_data$address == x]
     })
     
-    # Validate sample latitude and longitude columns
-    is_invalid_lat <- ! is_valid_lat(table[[lat_col]])
-    is_invalid_long <- ! is_valid_long(table[[long_col]])
-    is_invalid_coord <- is_invalid_lat | is_invalid_long
-    table[is_invalid_coord, lat_col] <- NA
-    table[is_invalid_coord, long_col] <- NA
+    # Infer location from latitude and longitude, giving preference to parsed version of user location
+    loc_to_lookup <- is_present(table[[lat_col]]) & is_present(table[[long_col]]) 
+    coord_data <- tidygeocoder::reverse_geo(lat = table[loc_to_lookup, lat_col], long = table[loc_to_lookup, long_col],
+                                            full_results = TRUE, custom_query = list("accept-language" = "en-US"),
+                                            progress_bar = FALSE)
     
-    # Infer location from latitude and longitude and truncate to the leftmost user placename
-    loc_to_lookup <- is_present(table[[lat_col]]) & is_present(table[[long_col]])
-    place_data <- tidygeocoder::reverse_geo(lat = table[loc_to_lookup, lat_col], long = table[loc_to_lookup, long_col],
-                                            full_results = TRUE, custom_query = list("accept-language" = "en-US"))
-    table[loc_to_lookup, loc_col] <- vapply(seq_along(place_data$address), FUN.VALUE = character(1), function(i) {
-        user_loc <- table[loc_to_lookup, loc_col][i]
-        address <- place_data$address[i]
-        if (is_coordinate(user_loc) || ! is_present(user_loc)) {
-            return(address)
-        }
-        address_parts <- split_address(address)[[1]]
-        user_loc_parts <- split_address(user_loc)[[1]]
-        shared_components <- unique(c(
-            which(grepl(address_parts, pattern = user_loc_parts[1], ignore.case = TRUE)),
-            which(vapply(address_parts, function(x) grepl(user_loc_parts[1], pattern = x, ignore.case = TRUE), FUN.VALUE = logical(1)))
-        ))
-        if (length(shared_components) >= 1) {
-            return(paste0(address_parts[max(shared_components):length(address_parts)], collapse = ', '))
-        } else {
-            return(address)
-        }
-    })
+    
+    parsed_locations <- location_data$display_name[match(table[[loc_col]], location_data$address)]
+    table[loc_to_lookup, loc_col] <- coord_data$address
+    table[! is.na(parsed_locations), loc_col] <- parsed_locations[! is.na(parsed_locations)]
+    table[is.na(table[[loc_col]]), loc_col] <- ''
     
     # Add individual columns for major place name hierarchy elements
     grouped_level_key <- list(
@@ -1123,11 +1107,18 @@ parse_location_and_coord_data <- function(table, lat_col, long_col, loc_col) {
         district = c('district', 'city_district', 'subdistrict', 'place')
     )
     table[loc_to_lookup, names(grouped_level_key)] <- lapply(grouped_level_key, function(cols) {
-        cols <- cols[cols %in% colnames(place_data)]
-        unlist(apply(place_data[, cols], MARGIN = 1, simplify = FALSE, function(r) {
+        cols <- cols[cols %in% colnames(coord_data)]
+        unlist(apply(coord_data[, cols], MARGIN = 1, simplify = FALSE, function(r) {
             r[!is.na(r)][1]
         }))
     })
+    
+    # Validate sample latitude and longitude columns
+    is_invalid_lat <- ! is_valid_lat(table[[lat_col]])
+    is_invalid_long <- ! is_valid_long(table[[long_col]])
+    is_invalid_coord <- is_invalid_lat | is_invalid_long
+    table[is_invalid_coord, lat_col] <- NA
+    table[is_invalid_coord, long_col] <- NA
     
     return(list(table = table, is_invalid_coord = is_invalid_coord))
 }
