@@ -1052,6 +1052,9 @@ is_valid_long <- function(values) {
         ! is_present(x) || (can_be_numeric(x) && as.numeric(x) >= -180 && as.numeric(x) <= 180)
     })
 }
+split_address <- function(values) {
+    strsplit(values, split = ' *, *')
+}
 
 # Parse and validate location and coordinate data
 parse_location_and_coord_data <- function(table, lat_col, long_col, loc_col) {
@@ -1089,11 +1092,43 @@ parse_location_and_coord_data <- function(table, lat_col, long_col, loc_col) {
     table[is_invalid_coord, lat_col] <- NA
     table[is_invalid_coord, long_col] <- NA
     
-    # Infer location from latitude and longitude
+    # Infer location from latitude and longitude and truncate to the leftmost user placename
     loc_to_lookup <- is_present(table[[lat_col]]) & is_present(table[[long_col]])
     place_data <- tidygeocoder::reverse_geo(lat = table[loc_to_lookup, lat_col], long = table[loc_to_lookup, long_col],
                                             full_results = TRUE, custom_query = list("accept-language" = "en-US"))
-    table[loc_to_lookup, loc_col] <- place_data$address
+    table[loc_to_lookup, loc_col] <- vapply(seq_along(place_data$address), FUN.VALUE = character(1), function(i) {
+        user_loc <- table[loc_to_lookup, loc_col][i]
+        address <- place_data$address[i]
+        if (is_coordinate(user_loc) || ! is_present(user_loc)) {
+            return(address)
+        }
+        address_parts <- split_address(address)[[1]]
+        user_loc_parts <- split_address(user_loc)[[1]]
+        shared_components <- unique(c(
+            which(grepl(address_parts, pattern = user_loc_parts[1], ignore.case = TRUE)),
+            which(vapply(address_parts, function(x) grepl(user_loc_parts[1], pattern = x, ignore.case = TRUE), FUN.VALUE = logical(1)))
+        ))
+        if (length(shared_components) >= 1) {
+            return(paste0(address_parts[max(shared_components):length(address_parts)], collapse = ', '))
+        } else {
+            return(address)
+        }
+    })
+    
+    # Add individual columns for major place name hierarchy elements
+    grouped_level_key <- list(
+        country = c('country'),
+        region = c('state', 'region'),
+        subregion = c('county', 'municipality'),
+        settlement = c('city', 'town', 'village', 'hamlet'),
+        district = c('district', 'city_district', 'subdistrict', 'place')
+    )
+    table[loc_to_lookup, names(grouped_level_key)] <- lapply(grouped_level_key, function(cols) {
+        cols <- cols[cols %in% colnames(place_data)]
+        unlist(apply(place_data[, cols], MARGIN = 1, simplify = FALSE, function(r) {
+            r[!is.na(r)][1]
+        }))
+    })
     
     return(list(table = table, is_invalid_coord = is_invalid_coord))
 }
