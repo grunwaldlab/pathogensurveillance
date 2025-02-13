@@ -6,6 +6,10 @@
 #
 # The first part of this script defines constants that might need to be changed in the future.
 
+# Dependecies
+library(tidygeocoder)
+library(lubridate)
+
 # Where to save output metadata files
 sample_data_path <- 'sample_metadata.tsv'
 reference_data_path <- 'reference_metadata.tsv'
