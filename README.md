@@ -80,52 +80,58 @@ https://grunwaldlab.github.io/pathogensurveillance_documentation
 
 ### Input format
 
-The primary input to the pipeline is a TSV (tab-separated value) or CSV (comma comma-separated value) file, specified using the `--sample_data` option.
-This can be made in a spreadsheet program like LibreOffice Calc or Microsoft Excel by exporting to TSV.
-Columns can be in any order and unneeded columns can be left out or left blank.
-Column names are case insensitive and spaces are equivalent to underscores and can be left out.
-Only a single column containing either paths to raw sequence data, SRA (Sequence Read Archive) accessions, or NCBI queries to search the SRA is required and each sample can have values in different columns.
+The primary input to the pipeline is a TSV (tab-separated value) or CSV (comma comma-separated value) file, specified using the `--input` option.
+This can be made in a spreadsheet program like LibreOffice Calc or Microsoft Excel by exporting to TSV/CSV.
+
+#### Formatting flexiblity
+
+Columns can be in any order and unused columns can be left out or left blank.
+Column names and values for categorical columns (e.g. `data_type`) are case insensitive and spaces and dashes are equivalent to underscores.
 Any columns not recognized by `pathogensurveillance` will be ignored, allowing users to adapt existing sample metadata table by adding new columns.
+
+#### Required inputs
+
+Only the `data_type` and `data_source` columns are needed.
 Below is a description of each column used by `pathogensurveillance`:
 
-- **sample_id**: The unique identifier for each sample. This will be used in file names to distinguish samples in the output. Each sample ID must correspond to a single source of sequence data (e.g. the `path` and `ncbi_accession` columns), although the same sequence data can be used by different IDs. Any values supplied that correspond to different sources of sequence data or contain characters that cannot appear in file names (\/:\*?"<>| .) will be modified automatically. If not supplied, it will be inferred from the `path`, `ncbi_accession`, or `name` columns.
-- **name**: A human-readable label for the sample that is used in plots and tables. If not supplied, it will be inferred from `sample_id`.
-- **description**: A longer human-readable label that is used in plots and tables. If not supplied, it will be inferred from `name`.
-- **path**: Path to input sequence data, typically gzipped FASTQ files. When paired end sequencing is used, this is used for the forward read's data and `path_2` is used for the reverse reads. This can be a local file path or a URL to an online location. The `sequence_type` column must have a value.
-- **path_2**: Path to the FASTQ files for the reverse read when paired-end sequencing is used. This can be a local file path or a URL to an online location. The `sequence_type` column must have a value.
-- **ncbi_accession**: An SRA accession ID for reads to be downloaded and used as samples. Values in the `sequence_type` column will be looked up if not supplied.
-- **ncbi_query**: A valid NCBI search query to search the SRA for reads to download and use as samples. This will result in an unknown number of samples being analyzed. The total number downloaded is limited by the `ncbi_query_max` column. Values in the `sample_id`, `name`, and `description` columns will be append to that supplied by the user. Values in the `sequence_type` column will be looked up and does not need to be supplied by the user.
-- **ncbi_query_max**: The maximum number or percentage of samples downloaded for the corresponding query in the `ncbi_query` column. Adding a `%` to the end of a number indicates a percentage of the total number of results instead of a count. A random of subset of results will be downloaded if `ncbi_query_max` is less than "100%" or the total number of results.
-- **sequence_type**: The type of sequencing used to produce reads for the `reads_1` and `reads_2` columns. Valid values include anything containing the words "illumina", "nanopore", or "pacbio". Will be looked up automatically for `ncbi_accession` and `ncbi_query` inputs but must be supplied by the user for `path` inputs.
-- **report_group_ids**: How to group samples into reports. For every unique value in this column a report will be generated. Samples can be assigned to multiple reports by separating group IDs by ";". For example `all;subset` will put the sample in both `all` and `subset` report groups. Samples will be added to a default group if this is not supplied.
+- **id**: The unique identifier for each sample/reference. This will be used in file names to distinguish samples/references in the output. Each ID must correspond to a single source of input data, although the same input data can be used by different IDs. Any values supplied that correspond to different sources of sequence data or contain characters that cannot appear in file names (\/:\*?"<>| .) will be modified automatically. If not supplied, it will be inferred from the `data_type` and `data_source` columns.
+- **report_id**: How to group samples into reports. For every unique value in this column a report will be generated. Samples can be assigned to multiple reports by separating group IDs by `;`. For example `all;subset` will put the sample in both `all` and `subset` report groups. Samples will be added to a default group if this is not supplied.
+- **name**: A short human-readable label that is used in plots and tables. If not supplied, it will be inferred from `id`.
+- **description**: A longer human-readable label that is used in plots and tables. If not supplied, it will be inferred from `name`.*
+- **input_type**: Controls how the pipeline uses this input, particularly whether the input is a "sample" that should be identified and tracked or a "reference" that should be used when useful to provide context to samples. Can accept the following values:
+    - `sample` (default): These are inputs you want more information about. The pipeline will analyze the data in `data_type` and `data_source` as well as any metadata available in other columns to try to identify and analyze the sample.
+    - `reference`: These are "known" inputs. The pipeline will use the data in `data_type` and `data_source` as well as any metadata available in other columns to provide context to samples or aid in the analysis of sample data.
+    - `sample metadata`: Like `sample`, but only metadata such as `location` and `time` will be used.
+    - `reference metadata`: Like `reference`, but only metadata such as `location` and `time` will be used.
+- **data_type**: What the type of the data in `data_source` is. Can be any of the following:
+    - `Illumina`: Illumina sequence data reads supplied as file paths to local FASTQ files or URLs. The two files from paired end sequencing can be defined by separating their paths with `;`.
+    - `Nanopore`: Nanopore sequence data reads supplied as file paths to local FASTQ files or URLs. 
+    - `Pacbio`: Pacbio sequence data reads supplied as file paths to local FASTQ files or URLs.
+    - `Assembly`: Genome assemblies 
+    - `NCBI accession`: A SRA, assembly, or biosample accession.
+    - `NCBI SRA query`: A query to the NCBI Short Read Archive (SRA). All values matching the query will be downloaded and used. Beware, this can be an impractical amount of results. The maximum number of values returned can be controlled with the `query_max` column.
+    - `NCBI assembly query`: A query to the NCBI assembly database. All values matching the query will be downloaded and used. Beware, this can be an impractical amount of results. The maximum number of values returned can be controlled with the `query_max` column.
+- **data_source**: The value identifying the data to be used, such as file paths, URLs, or database IDs, as defined by the `data_type` column.
+- **ref_group_id**: One or more reference group IDs separated by ";". These are used to supply specific references to specific samples. For references, these ind*icate which reference group a reference is a part of and for samples these indicate which reference group to use for the sample. For samples, the value in the `id` column of a reference can also be used.
+- **ref_primary_usage**: Controls how the reference is used in the analysis in cases where a single "best" reference is required, such as for variant calling. Can be one of "optional" (can be used if selected by the analysis), "required" (will always be used), "exclusive" (only those marked "exclusive" will be used), or "excluded" (will not be used).
+- **ref_contextual_usage**: Controls how the reference is used in the analysis in cases where multiple references are required to provide context for the samples, such as for phylogeny. Can be one of "optional" (can be used if selected by the analysis), "required" (will always be used), "exclusive" (only those marked "exclusive" will be used), or "excluded" (will not be used).
+- **enabled**: Either "TRUE" or "FALSE", indicating whether the sample should be included in the analysis or not. Defaults to "TRUE".
 - **color_by**: The names of other columns that contain values used to color samples in plots and figures in the report. Multiple column names can be separated by ";". Specified columns can contain either categorical factors or specific colors, specified as a hex code. By default, samples will be one color and references another.
 - **ploidy**: The ploidy of the sample. Should be a number. Defaults to "1".
-- **enabled**: Either "TRUE" or "FALSE", indicating whether the sample should be included in the analysis or not. Defaults to "TRUE".
-- **ref_group_ids**: One or more reference group IDs separated by ";". These are used to supply specific references to specific samples. These IDs correspond to IDs listed in the `ref_group_ids` or `ref_id` columns of the reference metadata TSV/CSV.
 - **latitude**: The latitude associated with a sample in decimal degrees (e.g. '40.446').
 - **longitude**: The longitude associated with a sample in decimal degrees (e.g. '-79.982').
 - **location**: An address, place name of a geographical location, or coordinates associated with the sample. Address components should be separated by commas and can contain arbitrary numbers of components (e.g. 'street, city/town, county, state, region, country' or 'city, state, country' or just 'country'). Used to infer values for the `latitude` and `longitude` columns if they are not supplied. If `latitude` and `longitude` are supplied, the value of this column will be inferred.
+- **country**: The country a sample was found in.
+- **region**: The part of a country a sample was found in, for example a state in the United States.
+- **subregion**: A smaller region within a larger region of a country, for example a county in the United States.
+- **place**: A city, town, village, park, or other notable point.
+- **district**: A part of a `place`, such as a neighborhood or city district.
+- **time**: The date and time associated with an input.
+- **image**: The paths or URLs to one or more images separated by `;` associated with the input.
+- **link**: One or more links associated with the input, separated by `;`.
 
-Additionally, users can supply a reference metadata TSV/CSV that can be used to assign custom references to particular samples using the `--reference_data` option.
-If not provided, the pipeline will download and choose references to use automatically.
-References are assigned to samples if they share a reference group ID in the `ref_group_ids` columns that can appear in both input TSVs/CSVs.
-The reference metadata TSV or the sample metadata TSV can have the following columns:
-
-- **ref_group_ids**: One or more reference group IDs separated by ";". These are used to group references and supply an ID that can be used in the `ref_group_ids` column of the sample metadata TSV/CSV to assign references to particular samples.
-- **ref_id**: The unique identifier for each user-defined reference genome. This will be used in file names to distinguish samples in the output. Each reference ID must correspond to a single source of reference data (The `ref_path`, `ref_ncbi_accession`, and `ref_ncbi_query` columns), although the same reference data can be used by multiple IDs. Any values that correspond to different sources of reference data or contain characters that cannot appear in file names (\/:\*?"<>| .) will be modified automatically. If not supplied, it will be inferred from the `path`, `ref_name` columns or supplied automatically when `ref_ncbi_accession` or `ref_ncbi_query` are used.
-- **ref_name**: A human-readable label for user-defined reference genomes that is used in plots and tables. If not supplied, it will be inferred from `ref_id`. It will be supplied automatically when the `ref_ncbi_query` column is used.
-- **ref_description**: A longer human-readable label for user-defined reference genomes that is used in plots and tables. If not supplied, it will be inferred from `ref_name`. It will be supplied automatically when the `ref_ncbi_query` column is used.
-- **ref_path**: Path to user-defined reference genomes for each sample. This can be a local file path or a URL to an online location.
-- **ref_ncbi_accession**: RefSeq accession ID for a user-defined reference genome. These will be automatically downloaded and used as input.
-- **ref_ncbi_query**: A valid NCBI search query to search the assembly database for genomes to download and use as references. This will result in an unknown number of references being downloaded. The total number downloaded is limited by the `ref_ncbi_query_max` column. Values in the `ref_id`, `ref_name`, and `ref_description` columns will be append to that supplied by the user.
-- **ref_ncbi_query_max**: The maximum number or percentage of references downloaded for the corresponding query in the `ref_ncbi_query` column. Adding a `%` to the end of a number indicates a percentage of the total number of results instead of a count. A random of subset of results will be downloaded if `ncbi_query_max` is less than "100%" or the total number of results.
-- **ref_primary_usage**: Controls how the reference is used in the analysis in cases where a single "best" reference is required, such as for variant calling. Can be one of "optional" (can be used if selected by the analysis), "required" (will always be used), "exclusive" (only those marked "exclusive" will be used), or "excluded" (will not be used).
-- **ref_contextual_usage**: Controls how the reference is used in the analysis in cases where multiple references are required to provide context for the samples, such as for phylogeny. Can be one of "optional" (can be used if selected by the analysis), "required" (will always be used), "exclusive" (only those marked "exclusive" will be used), or "excluded" (will not be used).
-- **ref_color_by**: The names of other columns that contain values used to color references in plots and figures in the report. Multiple column names can be separated by ";". Specified columns can contain either categorical factors or specific colors, specified as a hex code. By default, samples will be one color and references another.
-- **ref_enabled**: Either "TRUE" or "FALSE", indicating whether the reference should be included in the analysis or not. Defaults to "TRUE".
-- **ref_latitude**: The latitude associated with a reference in decimal degrees (e.g. '40.446').
-- **ref_longitude**: The longitude associated with a reference in decimal degrees (e.g. '-79.982').
-- **ref_location**: An address or coordinates associated with the reference. Address components should be separated by commas and can contain arbitrary numbers of components (e.g. 'street, city/town, county, state, region, country' or 'city, state, country' or just 'country'). Used to infer values for the `latitude` and `longitude` columns if they are not supplied. If `latitude` and `longitude` are supplied, the value of this column will be inferred.
+Additionally, users can supply a dedicated reference metadata TSV/CSV using the `--reference_data` option.
+The reference metadata TSV or the sample metadata TSV can have any of the columns documented above.
 
 ## Credits
 

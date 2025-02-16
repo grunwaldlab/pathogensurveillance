@@ -6,7 +6,7 @@
 #
 # The first part of this script defines constants that might need to be changed in the future.
 
-# Dependecies
+# Dependencies
 library(tidygeocoder)
 library(lubridate)
 

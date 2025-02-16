@@ -1,0 +1,29 @@
+id	name	   Description	input_type	data_type	Data Source	report id	ref_group id	refprimaryusage	Ref-contextual-usage	ENABLED	latitude	longitude	location	country	region	subregion	place	part	time	image	link
+			reference	assembly																	
+			reference	illumina	test/data/reads/22-299_R1.fastq.gz ; test/data/reads/22-299_R2.fastq.gz	 															
+			reference	nanopore																	
+			reference	NCBI accession																	
+			reference	NCBI assembly query																	
+			reference	NCBI SRA query																	
+			reference	pacbio																	
+			reference metadata	assembly																	
+			reference metadata	illumina																	
+			reference metadata	nanopore																	
+			reference metadata	NCBI accession																	
+			reference metadata	NCBI assembly query																	
+			reference metadata	NCBI SRA query																	
+			reference metadata	pacbio																	
+			sample	assembly																	
+			sample	illumina	https://github.com/grunwaldlab/pathogensurveillance/raw/master/test/data/reads_small/lane6-s013-indexRPI27-ATTCCT-7612-C7_S13_L006_R1_001.fastq.gz;https://github.com/grunwaldlab/pathogensurveillance/raw/master/test/data/reads_small/lane6-s013-indexRPI27-ATTCCT-7612-C7_S13_L006_R2_001.fastq.gz 	 															
+			sample	nanopore																	
+			sample	NCBI accession																	
+			sample	NCBI assembly query																	
+			sample	NCBI SRA query																	
+			sample	pacbio																	
+			sample metadata	assembly																	
+			sample metadata	illumina																	
+			sample metadata	nanopore																	
+			sample metadata	NCBI accession																	
+			sample metadata	NCBI assembly query																	
+			sample metadata	NCBI SRA query																	
+			sample metadata	pacbio																	
