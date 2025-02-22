@@ -80,21 +80,28 @@ https://grunwaldlab.github.io/pathogensurveillance_documentation
 
 ### Input format
 
-The primary input to the pipeline is a TSV (tab-separated value) or CSV (comma comma-separated value) file, specified using the `--input` option.
-This can be made in a spreadsheet program like LibreOffice Calc or Microsoft Excel by exporting to TSV/CSV.
+The primary input to the pipeline is one or more TSV (tab-separated value) or CSV (comma comma-separated value) file, specified using the `--input` option.
+These can be made in a spreadsheet program like [LibreOffice Calc](https://www.libreoffice.org/) or Microsoft Excel by exporting to TSV/CSV.
+Each of these input tables have the same input format requirements, but different types of data can be stored in different inputs for the user's convenience, see the "Using multiple input tables" section below for more details.
 
-#### Formatting flexiblity
+#### Format flexiblity
 
 Columns can be in any order and unused columns can be left out or left blank.
 Column names and values for categorical columns (e.g. `data_type`) are case insensitive and spaces and dashes are equivalent to underscores.
-Any columns not recognized by `pathogensurveillance` will be ignored, allowing users to adapt existing sample metadata table by adding new columns.
+Any columns not recognized by `pathogensurveillance` will be ignored, allowing users to adapt existing sample metadata tables by adding or renaming columns.
 
 #### Required inputs
 
-Only the `data_type` and `data_source` columns are needed.
+This pipeline is designed to be useful with minimal inputs.
+Only the `data_type` and `data_source` columns are needed for `sample` or `reference` input types, but ideally the `id`, `name`,  `report_id`, and `ploidy` (when applicable) are specified as well.
+The `sample metadata` and `reference metadata` input types do not require any particular columns, by will be ignored if they do nay have relevant metadata in at least one column.
+
+#### Possible inputs
+
 Below is a description of each column used by `pathogensurveillance`:
 
-- **id**: The unique identifier for each sample/reference. This will be used in file names to distinguish samples/references in the output. Each ID must correspond to a single source of input data, although the same input data can be used by different IDs. Any values supplied that correspond to different sources of sequence data or contain characters that cannot appear in file names (\/:\*?"<>| .) will be modified automatically. If not supplied, it will be inferred from the `data_type` and `data_source` columns.
+- **id**: The unique identifier for each sample/reference. This will be used in file names to distinguish samples/references in the output. Each ID can be used multiple times to indicate that multiple types of data are associated with a given sample and the same input data can be used by different IDs. However, not all combinations of input data types are supported. Any values supplied that that cannot appear in file names (\/:\*?"<>| .) will be modified automatically. If not supplied, it will be assumed that each row is a separate sample and the ID will be derived from the `data_type` and `data_source` columns.
+- **ref_group_id**: One or more reference group IDs separated by ";". These are used to supply specific references to specific samples. For references, these indicate which reference group a reference is a part of and for samples these indicate which reference group to use for the sample. For samples, the value in the `id` column of a reference can also be used.
 - **report_id**: How to group samples into reports. For every unique value in this column a report will be generated. Samples can be assigned to multiple reports by separating group IDs by `;`. For example `all;subset` will put the sample in both `all` and `subset` report groups. Samples will be added to a default group if this is not supplied.
 - **name**: A short human-readable label that is used in plots and tables. If not supplied, it will be inferred from `id`.
 - **description**: A longer human-readable label that is used in plots and tables. If not supplied, it will be inferred from `name`.*
@@ -111,11 +118,11 @@ Below is a description of each column used by `pathogensurveillance`:
     - `NCBI accession`: A SRA, assembly, or biosample accession.
     - `NCBI SRA query`: A query to the NCBI Short Read Archive (SRA). All values matching the query will be downloaded and used. Beware, this can be an impractical amount of results. The maximum number of values returned can be controlled with the `query_max` column.
     - `NCBI assembly query`: A query to the NCBI assembly database. All values matching the query will be downloaded and used. Beware, this can be an impractical amount of results. The maximum number of values returned can be controlled with the `query_max` column.
+    - `image`: A photograph or other image. 
 - **data_source**: The value identifying the data to be used, such as file paths, URLs, or database IDs, as defined by the `data_type` column.
-- **ref_group_id**: One or more reference group IDs separated by ";". These are used to supply specific references to specific samples. For references, these ind*icate which reference group a reference is a part of and for samples these indicate which reference group to use for the sample. For samples, the value in the `id` column of a reference can also be used.
+- **enabled**: Either "TRUE" or "FALSE", indicating whether the sample should be included in the analysis or not. Defaults to "TRUE".
 - **ref_primary_usage**: Controls how the reference is used in the analysis in cases where a single "best" reference is required, such as for variant calling. Can be one of "optional" (can be used if selected by the analysis), "required" (will always be used), "exclusive" (only those marked "exclusive" will be used), or "excluded" (will not be used).
 - **ref_contextual_usage**: Controls how the reference is used in the analysis in cases where multiple references are required to provide context for the samples, such as for phylogeny. Can be one of "optional" (can be used if selected by the analysis), "required" (will always be used), "exclusive" (only those marked "exclusive" will be used), or "excluded" (will not be used).
-- **enabled**: Either "TRUE" or "FALSE", indicating whether the sample should be included in the analysis or not. Defaults to "TRUE".
 - **color_by**: The names of other columns that contain values used to color samples in plots and figures in the report. Multiple column names can be separated by ";". Specified columns can contain either categorical factors or specific colors, specified as a hex code. By default, samples will be one color and references another.
 - **ploidy**: The ploidy of the sample. Should be a number. Defaults to "1".
 - **latitude**: The latitude associated with a sample in decimal degrees (e.g. '40.446').
@@ -126,12 +133,32 @@ Below is a description of each column used by `pathogensurveillance`:
 - **subregion**: A smaller region within a larger region of a country, for example a county in the United States.
 - **place**: A city, town, village, park, or other notable point.
 - **district**: A part of a `place`, such as a neighborhood or city district.
-- **time**: The date and time associated with an input.
-- **image**: The paths or URLs to one or more images separated by `;` associated with the input.
+- **date**: The date and optionally time associated with an input. Used to populate the `year`, `month`, `day`, `hour`, `minute`, and `second` columns if not supplied. Smaller time increments, such as seconds, can be omitted but large time increments must be present if smaller time increments are present. The year component of dates must include 4 digits (for example `2024`)For example, `March 21` would not be valid since it does not include the year. Most common data/time formats are supported.
+- **year**: The year with 4 digits (For example `2024`)
+- **month**: The month of year, either a number, abbreviation, or full name.
+- **day**: The day of the month as a number.
+- **hour**: The hour of a 24 hour clock or a 12 hour clock with am/pm (For example `13` and `1pm` are the same)
+- **minute**: The minute of an hour, between 0 and 60.
+- **second**: The seconds in an hour, between 0 and 60.
 - **link**: One or more links associated with the input, separated by `;`.
 
 Additionally, users can supply a dedicated reference metadata TSV/CSV using the `--reference_data` option.
 The reference metadata TSV or the sample metadata TSV can have any of the columns documented above.
+
+#### Disallowed columns
+
+There are also a few columns that the pipeline uses internally and these **cannot be supplied by the user**:
+
+- **_row_index_**: Used to store the original row an input was on, primarily for error reporting.
+- **_input_path_**: Used to store the original file an input was from, primarily for error reporting.
+
+#### Using multiple input tables
+
+All input tables are combined into a single table, but each input table can have different subsets of supported columns or user-specific custom columns.
+This can be useful if you are adapting multiple existing tables or want to have separate tables for different types of data.
+For example, one table can contain paths to sequence data as `sample` input types while another has GPS coordinates with `sample metadata` input types.
+Or, you could have all `reference` input data types in one table and all `sample` inputs in another.
+Using different tables to store data for the same samples requires that they share the same value in the `id` column.
 
 ## Credits
 

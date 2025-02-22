@@ -9,10 +9,10 @@
 # Dependencies
 library(tidygeocoder)
 library(lubridate)
+library(readxl)
 
 # Where to save output metadata files
-sample_data_path <- 'sample_metadata.tsv'
-reference_data_path <- 'reference_metadata.tsv'
+metadata_output_path <- 'metadata.tsv'
 
 # Where to save list of messages to be shown to the user, such as samples that were filtered out
 message_data_path <- 'message_data.tsv'
@@ -28,125 +28,63 @@ message_data <- data.frame(
 # Column names that can be used by the pipeline
 # These will always be present and in this order in the output
 # See the README.md for descriptions of each column
-known_columns_samp <- c(
-    'sample_id',
+known_columns <- c(
+    'id',
+    'ref_group_id',
+    'report_id',
     'name',
     'description',
-    'path',
-    'path_2',
-    'ncbi_accession',
-    'ncbi_query',
-    'ncbi_query_max',
-    'sequence_type',
-    'report_group_ids',
+    'input_type',
+    'data_type',
+    'data_source',
+    'enabled',
+    'ref_primary_usage',
+    'ref_contextual_usage',
     'color_by',
     'ploidy',
-    'enabled',
     'latitude',
     'longitude',
     'location',
-    'ref_group_ids',
-    'ref_id',
-    'ref_name',
-    'ref_description',
-    'ref_path',
-    'ref_ncbi_accession',
-    'ref_ncbi_query',
-    'ref_ncbi_query_max',
-    'ref_primary_usage',
-    'ref_contextual_usage',
-    'ref_color_by',
-    'ref_enabled',
-    'ref_latitude',
-    'ref_longitude',
-    'ref_location'
-)
-known_columns_ref <- c(
-    'ref_group_ids',
-    'ref_id',
-    'ref_name',
-    'ref_description',
-    'ref_path',
-    'ref_ncbi_accession',
-    'ref_ncbi_query',
-    'ref_ncbi_query_max',
-    'ref_primary_usage',
-    'ref_contextual_usage',
-    'ref_color_by',
-    'ref_enabled',
-    'ref_latitude',
-    'ref_longitude',
-    'ref_location'
+    'country',
+    'region',
+    'subregion',
+    'place',
+    'district',
+    'date',
+    'year',
+    'month',
+    'day',
+    'hour',
+    'minute',
+    'second',
+    'link'
 )
 
 # Default values for columns
-defaults_ref <- c(
-    ref_ncbi_query_max = '30',
-    ref_primary_usage = 'optional',
-    ref_contextual_usage = 'optional',
-    ref_enabled = TRUE
-)
-defaults_samp <- c(
-    report_group_ids = '_no_group_defined_',
+# These are defaults that are applied without warnings or notes
+defaults <- c(
+    input_type = 'sample',
+    report_group_id = 'all',
     enabled = TRUE,
-    ncbi_query_max = '10',
-    ref_ncbi_query_max = defaults_ref[['ref_ncbi_query_max']],
-    ref_primary_usage = defaults_ref[['ref_primary_usage']],
-    ref_contextual_usage = defaults_ref[['ref_contextual_usage']],
-    ref_enabled = defaults_ref[['ref_enabled']]
+    query_max = 10,
+    ref_primary_usage = 'optional',
+    ref_contextual_usage = 'optional'
 )
 
-# Columns that must have a valid value in the input of this script
-# For each vector in the list, at least one of the columns must have a value
-required_input_columns_samp <- list(
-    c('path', 'path_2', 'ncbi_accession', 'ncbi_query')
-)
-required_input_columns_ref <- list(
-    c('ref_path', 'ref_ncbi_accession', 'ref_ncbi_query')
-)
-
-# Groups of columns in which only a single one should have a value. Regular expressions are allowed.
-# If a regular expression matches multiple columns, then both matches can have a value
-mutually_exclusive_columns_samp <- list(
-    c('ref_path', 'ref_ncbi_accession', 'ref_ncbi_query'),
-    c('reads_?2?', 'ncbi_accession', 'ncbi_query')
-)
-mutually_exclusive_columns_ref <- list(
-    c('ref_path', 'ref_ncbi_accession', 'ref_ncbi_query')
-)
-
-# These are file extensions that are expected in the input data.
-# These are (currently) only used to remove these extensions for file paths when they are used for IDs
-known_extensions <- c(
-    '.fastq',
-    '.fastq.gz',
-    '.fna',
-    '.fna.gz',
-    '.fasta',
-    '.fasta.gz',
-    '.fa',
-    '.fa.gz',
-    '.fq',
-    '.fq.gz'
-)
-
-# Types of sequencing supported by the pipeline.
-# This is case insensitive
-known_read_types <- c(
+# Types of data supported by the pipeline.
+known_data_types <- c(
     'illumina',
     'nanopore',
     'pacbio',
-    'bgiseq'
+    'assembly',
+    'ncbi accession',
+    'ncbi sra query',
+    'ncbi assembly query',
+    'image'
 )
 
 # Regular expression for characters that cannot appear in IDs
 invalid_id_char_pattern <- '[\\/:;*?"<>| .()-]+'
-
-# Name of default group if all samples do not have a group defined
-default_group_full <- 'all'
-
-# Name of default report group if some samples do not have a group defined
-default_group_partial <- '_no_group_defined_'
 
 # Settings for how references can be used
 valid_ref_usage_types <- c(
@@ -164,25 +102,23 @@ is_present <- function(x) {
 # Parse inputs
 args <- commandArgs(trailingOnly = TRUE)
 args <- as.list(args)
-# args <- list('~/downloads/sample_data_N664_true.csv')
-# args <- list('/home/fosterz/projects/pathogensurveillance/tests/data/metadata/salmonella_sample_data_val_N566.csv', '/home/fosterz/projects/pathogensurveillance/tests/data/metadata/salmonella_ref_data_val.csv')
-# args <- list("/home/fosterz/projects/pathogensurveillance/tests/data/metadata/small_genome.csv")
-# args <- list("/home/fosterz/projects/pathogensurveillance/tests/data/metadata/serratia_N664.csv", '/home/fosterz/projects/pathogensurveillance/tests/data/metadata/serratia_N664_ref_data.csv')
-args <- list("/home/fosterz/projects/pathogensurveillance/tests/data/metadata/mixed_bacteria.csv", '/home/fosterz/projects/pathogensurveillance/tests/data/metadata/mixed_references.csv')
-# args <- list("/home/fosterz/projects/pathogensurveillance/tests/data/metadata/mycobacteroides_small.tsv")
-# args <- list("/home/fosterz/projects/pathogensurveillance/tests/data/metadata/serratia_N664.csv", '/home/fosterz/projects/pathogensurveillance/tests/data/metadata/serratia_N664_ref_data.csv')
-# args <- list("/home/fosterz/projects/pathogensurveillance/tests/data/metadata/mixed_bacteria.csv", '/home/fosterz/projects/pathogensurveillance/tests/data/metadata/mixed_references.csv')
+
+# Test data sets (should all be commented out)
+args <- list("/home/fosterz/projects/pathogensurveillance/tests/data/metadata/feature_test.tsv", "/home/fosterz/projects/pathogensurveillance/tests/data/metadata/feature_test_refs.csv")
+
+
 
 read_input_table <- function(path) {
     if (endsWith(path, '.csv')) {
         output <- read.csv(path, check.names = FALSE)
     } else if (endsWith(path, '.tsv')) {
         output <- read.csv(path, check.names = FALSE, sep = '\t')
+    } else if (endsWith(path, '.xls') || endsWith(path, '.xlsx')) {
+        output <- readxl::read_excel(path)
     } else {
-        stop('Input file extension not supported. Must be .csv or .tsv.')
+        stop('Input file extension not supported. Must be .csv, .tsv, .xls, or .xlsx')
     }
 }
-
 metadata_original_samp <- read_input_table(args[[1]])
 if (length(args) > 1) {
     metadata_original_ref <- read_input_table(args[[2]])
