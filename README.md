@@ -118,7 +118,8 @@ Below is a description of each column used by `pathogensurveillance`:
     - `NCBI accession`: A SRA, assembly, or biosample accession.
     - `NCBI SRA query`: A query to the NCBI Short Read Archive (SRA). All values matching the query will be downloaded and used. Beware, this can be an impractical amount of results. The maximum number of values returned can be controlled with the `query_max` column.
     - `NCBI assembly query`: A query to the NCBI assembly database. All values matching the query will be downloaded and used. Beware, this can be an impractical amount of results. The maximum number of values returned can be controlled with the `query_max` column.
-    - `image`: A photograph or other image. 
+    - `image`: A photograph or other image.
+    - `observation`: The description or name of something that was observed. Primarily a way to have metadata about something, like it location or data, without any other type of input.
 - **data_source**: The value identifying the data to be used, such as file paths, URLs, or database IDs, as defined by the `data_type` column.
 - **enabled**: Either "TRUE" or "FALSE", indicating whether the sample should be included in the analysis or not. Defaults to "TRUE".
 - **ref_primary_usage**: Controls how the reference is used in the analysis in cases where a single "best" reference is required, such as for variant calling. Can be one of "optional" (can be used if selected by the analysis), "required" (will always be used), "exclusive" (only those marked "exclusive" will be used), or "excluded" (will not be used).
