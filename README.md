@@ -87,30 +87,51 @@ Each of these input tables have the same input format requirements, but differen
 #### Format flexiblity
 
 Columns can be in any order and unused columns can be left out or left blank.
-Column names and values for categorical columns (e.g. `data_type`) are case insensitive and spaces and dashes are equivalent to underscores.
+Column names and values for categorical columns (e.g. `type`) are case insensitive and spaces and dashes are equivalent to underscores.
 Any columns not recognized by `pathogensurveillance` will be ignored, allowing users to adapt existing sample metadata tables by adding or renaming columns.
 
-#### Required inputs
+#### Required and recommended columns
 
-This pipeline is designed to be useful with minimal inputs.
-Only the `data_type` and `data_source` columns are needed for `sample` or `reference` input types, but ideally the `id`, `name`,  `report_id`, and `ploidy` (when applicable) are specified as well.
-The `sample metadata` and `reference metadata` input types do not require any particular columns, by will be ignored if they do nay have relevant metadata in at least one column.
+This pipeline is designed to be useful with minimal inputs while still being very flexible for advanced users.
+Only the `type` and `source` columns are needed, but you probably want the following columns as well:
 
-#### Possible inputs
+- `data_id`, `bio_id`, and `report_id`: so output files have nice names
+- `name` and `description`: so figures have nice labels
+- `ploidy`: to avoid errors when using diploids
+- `color_by`: so figures have colors relevant to the user's use case
+
+#### All recognized columns
 
 Below is a description of each column used by `pathogensurveillance`:
 
-- **id**: The unique identifier for each sample/reference. This will be used in file names to distinguish samples/references in the output. Each ID can be used multiple times to indicate that multiple types of data are associated with a given sample and the same input data can be used by different IDs. However, not all combinations of input data types are supported. Any values supplied that that cannot appear in file names (\/:\*?"<>| .) will be modified automatically. If not supplied, it will be assumed that each row is a separate sample and the ID will be derived from the `data_type` and `data_source` columns.
-- **ref_group_id**: One or more reference group IDs separated by ";". These are used to supply specific references to specific samples. For references, these indicate which reference group a reference is a part of and for samples these indicate which reference group to use for the sample. For samples, the value in the `id` column of a reference can also be used.
-- **report_id**: How to group samples into reports. For every unique value in this column a report will be generated. Samples can be assigned to multiple reports by separating group IDs by `;`. For example `all;subset` will put the sample in both `all` and `subset` report groups. Samples will be added to a default group if this is not supplied.
-- **name**: A short human-readable label that is used in plots and tables. If not supplied, it will be inferred from `id`.
-- **description**: A longer human-readable label that is used in plots and tables. If not supplied, it will be inferred from `name`.*
-- **input_type**: Controls how the pipeline uses this input, particularly whether the input is a "sample" that should be identified and tracked or a "reference" that should be used when useful to provide context to samples. Can accept the following values:
-    - `sample` (default): These are inputs you want more information about. The pipeline will analyze the data in `data_type` and `data_source` as well as any metadata available in other columns to try to identify and analyze the sample.
-    - `reference`: These are "known" inputs. The pipeline will use the data in `data_type` and `data_source` as well as any metadata available in other columns to provide context to samples or aid in the analysis of sample data.
+- **`data_id`**: The unique identifier for each combination of `type` and `source`.
+    This ID can appear in multiple tables or rows as long as only one of those instances has values for the `type` and `source` columns and no other columns have overlapping values.
+    When it appears in multiple tables/rows, the data is combined into a single row.
+    This will be used to name output files where relevant, so any values supplied that that cannot appear in file names (\/:\*?"<>| .) will be modified automatically.
+    Note that changing this ID after the pipeline has already been run will invalidate the cache associated with this data.
+    It might therefore be preferable in some cases to not set this manually and allow the pipeline to use a hash of the `type` and `source` columns, which is the default behavior.
+- **`bio_id`**: The unique identifier for the organism or physical sample the data on this row is associated with.
+    Multiple rows can share this ID to indicate that multiple data are associated with this same sample.
+    For example, Illumina reads from an isolate and photos of the same isolate growing on a plate.
+    This will be used to name output files where relevant, so any values supplied that that cannot appear in file names (\/:\*?"<>| .) will be modified automatically.
+    If not supplied, it will based on the `data_id` column value.
+- **`report_id`**: How to group samples into reports.
+    A report will be generated for every unique value in this column.
+    Samples can be assigned to multiple reports by separating group IDs by `;`.
+    For example `all;subset` will put the sample in both `all` and `subset` reports.
+    This will be used to name output files where relevant, so any values supplied that that cannot appear in file names (\/:\*?"<>| .) will be modified automatically.
+    If not supplied, samples will be added to a report with the ID `miscellaneous`.
+- **`usage`**: Controls how the pipeline uses this input, particularly whether the input is a "sample" that should be identified and tracked or a "reference" that should be used when useful to provide context to samples. Can accept the following values:
+    - `sample` (default): These are inputs you want more information about. The pipeline will analyze the data in `type` and `source` as well as any metadata available in other columns to try to identify and analyze the sample.
+    - `reference`: These are "known" inputs. The pipeline will use the data in `type` and `source` as well as any metadata available in other columns to provide context to samples or aid in the analysis of sample data.
     - `sample metadata`: Like `sample`, but only metadata such as `location` and `time` will be used.
     - `reference metadata`: Like `reference`, but only metadata such as `location` and `time` will be used.
-- **data_type**: What the type of the data in `data_source` is. Can be any of the following:
+- **`name`**: A short human-readable label that is used in plots and tables.
+    If not supplied, it will be inferred from `description` or `bio_id`.
+- **`description`**: A longer human-readable label that is used in plots and tables.
+    If not supplied, it will be inferred from `name` or `bio_id`.
+- **`enabled`**: Either `TRUE` or `FALSE`, indicating whether the sample should be included in the analysis or not. Defaults to `TRUE`.
+- **`type`**: What the type of the data in `source` is. Can be any of the following:
     - `Illumina`: Illumina sequence data reads supplied as file paths to local FASTQ files or URLs. The two files from paired end sequencing can be defined by separating their paths with `;`.
     - `Nanopore`: Nanopore sequence data reads supplied as file paths to local FASTQ files or URLs. 
     - `Pacbio`: Pacbio sequence data reads supplied as file paths to local FASTQ files or URLs.
@@ -120,46 +141,76 @@ Below is a description of each column used by `pathogensurveillance`:
     - `NCBI assembly query`: A query to the NCBI assembly database. All values matching the query will be downloaded and used. Beware, this can be an impractical amount of results. The maximum number of values returned can be controlled with the `query_max` column.
     - `image`: A photograph or other image.
     - `observation`: The description or name of something that was observed. Primarily a way to have metadata about something, like it location or data, without any other type of input.
-- **data_source**: The value identifying the data to be used, such as file paths, URLs, or database IDs, as defined by the `data_type` column.
-- **enabled**: Either "TRUE" or "FALSE", indicating whether the sample should be included in the analysis or not. Defaults to "TRUE".
-- **ref_primary_usage**: Controls how the reference is used in the analysis in cases where a single "best" reference is required, such as for variant calling. Can be one of "optional" (can be used if selected by the analysis), "required" (will always be used), "exclusive" (only those marked "exclusive" will be used), or "excluded" (will not be used).
-- **ref_contextual_usage**: Controls how the reference is used in the analysis in cases where multiple references are required to provide context for the samples, such as for phylogeny. Can be one of "optional" (can be used if selected by the analysis), "required" (will always be used), "exclusive" (only those marked "exclusive" will be used), or "excluded" (will not be used).
-- **color_by**: The names of other columns that contain values used to color samples in plots and figures in the report. Multiple column names can be separated by ";". Specified columns can contain either categorical factors or specific colors, specified as a hex code. By default, samples will be one color and references another.
-- **ploidy**: The ploidy of the sample. Should be a number. Defaults to "1".
-- **latitude**: The latitude associated with a sample in decimal degrees (e.g. '40.446').
-- **longitude**: The longitude associated with a sample in decimal degrees (e.g. '-79.982').
-- **location**: An address, place name of a geographical location, or coordinates associated with the sample. Address components should be separated by commas and can contain arbitrary numbers of components (e.g. 'street, city/town, county, state, region, country' or 'city, state, country' or just 'country'). Used to infer values for the `latitude` and `longitude` columns if they are not supplied. If `latitude` and `longitude` are supplied, the value of this column will be inferred.
-- **country**: The country a sample was found in.
-- **region**: The part of a country a sample was found in, for example a state in the United States.
-- **subregion**: A smaller region within a larger region of a country, for example a county in the United States.
-- **place**: A city, town, village, park, or other notable point.
-- **district**: A part of a `place`, such as a neighborhood or city district.
-- **date**: The date and optionally time associated with an input. Used to populate the `year`, `month`, `day`, `hour`, `minute`, and `second` columns if not supplied. Smaller time increments, such as seconds, can be omitted but large time increments must be present if smaller time increments are present. The year component of dates must include 4 digits (for example `2024`)For example, `March 21` would not be valid since it does not include the year. Most common data/time formats are supported.
-- **year**: The year with 4 digits (For example `2024`)
-- **month**: The month of year, either a number, abbreviation, or full name.
-- **day**: The day of the month as a number.
-- **hour**: The hour of a 24 hour clock or a 12 hour clock with am/pm (For example `13` and `1pm` are the same)
-- **minute**: The minute of an hour, between 0 and 60.
-- **second**: The seconds in an hour, between 0 and 60.
-- **link**: One or more links associated with the input, separated by `;`.
-
-Additionally, users can supply a dedicated reference metadata TSV/CSV using the `--reference_data` option.
-The reference metadata TSV or the sample metadata TSV can have any of the columns documented above.
+- **`source`**: The value identifying the data to be used, such as file paths, URLs, or database IDs, as defined by the `type` column.
+- **`query_max`**: The maximum number, proportion, or percentage of results to use from input types that use database searches such as `NCBI SRA query` and `NCBI assembly query`.
+    If not supplied, defaults to `10`.
+- **`reference`**: Specifies which references are associated with this data.
+    can be one or more values from the `data_id`, `bio_id`, or `ref_group_id` columns separated by ";".
+    If not supplied, only references that share the same `report_id` will be considered.
+- **`ref_group_id`**: One or more reference group IDs separated by ";".
+    These indicate which reference group a reference is a part of, allowing multiple references to be specified using a single ID in the `references` column.
+- **`ref_primary_usage`**: Controls how the reference is used in cases where a single "best" reference is required, such as for variant calling. Can be one of:
+    - `optional`: Can be used if selected by the pipeline
+    - `required`: Will always be used if possible
+    - `exclusive`: Only those marked "exclusive" will be used
+    - `excluded`: Will not be used
+- **`ref_contextual_usage`**: Controls how the reference is used in cases where multiple references are required to provide context for the samples, such as for phylogeny. Can be one of:
+    - `optional`: Can be used if selected by the pipeline
+    - `required`: Will always be used if possible
+    - `exclusive`: Only those marked "exclusive" will be used
+    - `excluded`: Will not be used
+- **`color_by`**: The names of other columns, usually user-specific, that contain values used to color samples in plots and figures in the report.
+    Multiple column names can be separated by ";".
+    Specified columns can contain either categorical factors or specific colors, specified as a hex code.
+    By default, samples will be one color and references another.
+- **`ploidy`**: The ploidy of the sample. Should be a number. Defaults to `1` (haploid).
+- **`latitude`**: The latitude associated with a sample in decimal degrees (e.g. `40.446`).
+- **`longitude`**: The longitude associated with a sample in decimal degrees (e.g. `-79.982`).
+- **`location`**: An address, place name of a geographical location, or coordinates associated with the sample.
+    Address components should be separated by commas and can contain arbitrary numbers of components (e.g. 'street, city/town, county, state, region, country' or 'city, state, country' or just 'country').
+    Used to infer values for the `latitude` and `longitude` columns if they are not supplied.
+    If `latitude` and `longitude` are supplied, the value of this column will be inferred.
+- **`country`**: The country a sample was found in.
+- **`region`**: The part of a country a sample was found in, for example a state in the United States.
+- **`subregion`**: A smaller region within a larger region of a country, for example a county in the United States.
+- **`place`**: A city, town, village, park, or other notable point.
+- **`part`**: A part of a `place`, such as a neighborhood, road, or city district.
+- **`date`**: The date and optionally time associated with an input.
+    Used to populate the `year`, `month`, `day`, `hour`, `minute`, and `second` columns if not supplied.
+    Smaller time increments, such as seconds, can be omitted but large time increments must be present if smaller time increments are present.
+    The year component of dates must include 4 digits (for example `2024`).
+    For example, `March 21` would not be valid since it does not include the year.
+    Most common data/time formats are supported.
+- **`year`**: The year with 4 digits (For example `2024`)
+- **`month`**: The month of year, either a number, abbreviation, or full name.
+- **`day`**: The day of the month as a number.
+- **`hour`**: The hour of a 24 hour clock or a 12 hour clock with am/pm (For example `13` and `1pm` are the same)
+- **`minute`**: The minute of an hour, between 0 and 60.
+- **`second`**: The seconds in an hour, between 0 and 60.
+- **`link`**: One or more URLs associated with the input, separated by `;`.
 
 #### Disallowed columns
 
 There are also a few columns that the pipeline uses internally and these **cannot be supplied by the user**:
 
-- **_row_index_**: Used to store the original row an input was on, primarily for error reporting.
-- **_input_path_**: Used to store the original file an input was from, primarily for error reporting.
+- **`_row_index_`**: Used to store the original row an input was on, primarily for error reporting.
+- **`_input_path_`**: Used to store the original file an input was from, primarily for error reporting.
+- **`_sheet_name_`**: Used to store which sheet in spreadsheet style inputs a value came from.
 
 #### Using multiple input tables
 
-All input tables are combined into a single table, but each input table can have different subsets of supported columns or user-specific custom columns.
+Multiple input tables are supported.
+All input tables are combined into a single table as a first step in the pipeline, but each input table can have different subsets of supported columns or user-specific custom columns.
 This can be useful if you are adapting multiple existing tables or want to have separate tables for different types of data.
-For example, one table can contain paths to sequence data as `sample` input types while another has GPS coordinates with `sample metadata` input types.
-Or, you could have all `reference` input data types in one table and all `sample` inputs in another.
-Using different tables to store data for the same samples requires that they share the same value in the `id` column.
+Here are some examples:
+
+- One table contains paths to sequence data using `Illumina` input types while another has GPS coordinates of where that organism was found using `observation` input types.
+    In this case the two tables would need a `bio_id` column with values identifying which sequence data set goes with which GPS coordinates.
+- One table contains samples with `sample` in the `usage` column and another has references with `reference` in the `usage` column.
+- Storing the location associated with `assembly` data types in a separate table by using the same values in the `data_id` column.
+
+In all cases, having multiple tables is the same as having the same data as different rows in the same table.
+
 
 ## Credits
 
