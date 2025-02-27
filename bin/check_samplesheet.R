@@ -39,18 +39,6 @@ args <- list("/home/fosterz/projects/pathogensurveillance/tests/data/metadata/fe
 
 
 
-# Check that required input columns are present
-check_required_cols <- function(metadata, required_cols, csv_name) {
-    for (columns in required_cols) {
-        if (! any(columns %in% colnames(metadata))) {
-            stop(call. = FALSE, 'At least one of the following columns must be present in the ', csv_name, ' CSV: ', paste0('"', columns, '"', collapse = ', '))
-        }
-    }
-}
-check_required_cols(metadata_samp, required_input_columns_samp, 'sample data')
-check_required_cols(metadata_ref, required_input_columns_ref, 'reference data')
-
-
 # Validate color_by column and add back any original user-defined columns used
 validate_color_by <- function(metadata, color_by_col, known_cols, csv_name, sep = ';') {
     split_color_by <- strsplit(metadata[[color_by_col]], split = sep)
@@ -70,20 +58,7 @@ if (nrow(metadata_ref) > 0) {
     metadata_ref$ref_color_by <- validate_color_by(metadata_ref, 'ref_color_by', known_columns_ref, 'reference data')
 }
 
-# Move reference data from the sample metadata to the reference metadata
-ref_in_samp_data <- metadata_samp[, known_columns_ref]
-has_ref_data <- apply(ref_in_samp_data[, unlist(required_input_columns_ref)], MARGIN = 1, function(x) any(is_present(x)))
-needs_new_ref_id <- has_ref_data & (ref_in_samp_data$ref_id == '' | is.na(ref_in_samp_data$ref_id == ''))
-ref_group_id_proxy <- apply(metadata_samp[needs_new_ref_id, unlist(required_input_columns_ref), drop = FALSE], MARGIN = 1, FUN = paste, collapse = "")
-new_ref_group_ids <- paste0('_ref_group_', as.numeric(factor(ref_group_id_proxy)))
-ref_in_samp_data$ref_group_ids[needs_new_ref_id] <- new_ref_group_ids
-metadata_samp$ref_group_ids[needs_new_ref_id] <- new_ref_group_ids
 
-ref_data_addition <- ref_in_samp_data[has_ref_data, ]
-user_specific_ref_cols <- colnames(metadata_ref)[! colnames(metadata_ref) %in% colnames(ref_data_addition)]
-ref_data_addition[user_specific_ref_cols] <- rep('', nrow(ref_data_addition))
-ref_data_addition <- ref_data_addition[, colnames(metadata_ref)]
-metadata_ref <- unique(rbind(metadata_ref, ref_data_addition))
 
 # Validate usage columns
 validate_usage_col <- function(metadata, col) {
@@ -103,22 +78,6 @@ if (nrow(metadata_ref) > 0) {
     metadata_ref$ref_contextual_usage <- validate_usage_col(metadata_ref, 'ref_contextual_usage')
 }
 
-# Validate enabled column
-validate_enabled <- function(col_values, file_name) {
-    is_enabled <- as.logical(col_values)
-    is_invalid <- is.na(is_enabled)
-    if (any(is_invalid)) {
-        stop(call. = FALSE, paste0(
-            'The following rows in the ', file_name, ' have invalid values for the `enabled` column:\n    ',
-            paste0(which(is_invalid), ' (', col_values[is_invalid], ')', collapse = ', '), '\n'
-        ))
-    }
-    return(is_enabled)
-}
-metadata_samp$enabled <- validate_enabled(metadata_samp$enabled, 'sample data CSV')
-if (nrow(metadata_ref) > 0) {
-    metadata_ref$ref_enabled <- validate_enabled(metadata_ref$ref_enabled, 'reference data CSV')
-}
 
 # Convert NCBI sample queries to a list of SRA run accessions
 get_ncbi_sra_runs <- function(query) {
