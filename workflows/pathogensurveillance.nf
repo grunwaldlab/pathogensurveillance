@@ -210,7 +210,7 @@ workflow PATHOGENSURVEILLANCE {
     group_messages = messages
         .unique()
         .collectFile(keepHeader: true, skip: 1) { sample_meta, report_meta, ref_meta, workflow, level, message ->
-            [ "${report_meta.id}.tsv", "\"sample_id\"\t\"reference_id\"\t\"workflow\"\t\"level\"\t\"message\"\n\"${sample_meta ? sample_meta.id : 'NA'}\"\t\"${ref_meta ? ref_meta.id : 'NA'}\"\t\"${workflow}\"\t\"${level}\"\t\"${message}\"\n" ]
+            [ "${report_meta.id}.tsv", "\"data_id\"\t\"reference_id\"\t\"workflow\"\t\"level\"\t\"message\"\n\"${sample_meta ? sample_meta.id : 'NA'}\"\t\"${ref_meta ? ref_meta.id : 'NA'}\"\t\"${workflow}\"\t\"${level}\"\t\"${message}\"\n" ]
         }
         .map {[[id: it.getSimpleName()], it]}
         .ifEmpty([])

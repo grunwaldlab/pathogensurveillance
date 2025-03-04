@@ -6,28 +6,6 @@
 #
 # The first part of this script defines constants that might need to be changed in the future.
 
-# Where to save output metadata files
-metadata_output_path <- 'metadata.tsv'
-
-# Where to save list of messages to be shown to the user, such as samples that were filtered out
-message_data_path <- 'message_data.tsv'
-message_data <- data.frame(
-    sample_id = character(0),
-    report_group_id = character(0),
-    reference_id = character(0),
-    workflow = character(0),
-    message_type = character(0),
-    description = character(0)
-)
-
-# Settings for how references can be used
-valid_ref_usage_types <- c(
-    'optional',
-    'required',
-    'excluded',
-    'exclusive'
-)
-
 # Parse inputs
 args <- commandArgs(trailingOnly = TRUE)
 args <- as.list(args)
@@ -36,126 +14,6 @@ args <- as.list(args)
 args <- list("/home/fosterz/projects/pathogensurveillance/tests/data/metadata/feature_test.tsv", "/home/fosterz/projects/pathogensurveillance/tests/data/metadata/feature_test_refs.csv")
 
 
-
-
-
-# Validate color_by column and add back any original user-defined columns used
-validate_color_by <- function(metadata, color_by_col, known_cols, csv_name, sep = ';') {
-    split_color_by <- strsplit(metadata[[color_by_col]], split = sep)
-    split_color_by <- lapply(split_color_by, trimws)
-    all_color_by_cols <- unique(unlist(split_color_by))
-    missing_cols <- all_color_by_cols[! all_color_by_cols %in% colnames(metadata)]
-    if (length(missing_cols) > 0) {
-        stop(call. = FALSE, paste0(
-            'The following columns in the ', csv_name, ' CSV referenced by the "', color_by_col,
-            '" column do not exist: ', paste0('"', missing_cols, '"', collapse = ', '), '\n'
-        ))
-    }
-    return(unlist(lapply(split_color_by, paste0, collapse = sep)))
-}
-metadata_samp$color_by <- validate_color_by(metadata_samp, 'color_by', known_columns_samp, 'sample data')
-if (nrow(metadata_ref) > 0) {
-    metadata_ref$ref_color_by <- validate_color_by(metadata_ref, 'ref_color_by', known_columns_ref, 'reference data')
-}
-
-
-
-# Validate usage columns
-validate_usage_col <- function(metadata, col) {
-    unlist(lapply(1:nrow(metadata), function(index) {
-        value <- tolower(trimws(metadata[[col]][index]))
-        if (! value %in% valid_ref_usage_types) {
-            stop(call. = FALSE, paste0(
-                'The value "', value, '" on row ', index, ' column "', col, '" is not valid. It must be one of "',
-                paste0(valid_ref_usage_types, collapse = '", "'), '"'
-            ))
-        }
-        return(value)
-    }))
-}
-if (nrow(metadata_ref) > 0) {
-    metadata_ref$ref_primary_usage <- validate_usage_col(metadata_ref, 'ref_primary_usage')
-    metadata_ref$ref_contextual_usage <- validate_usage_col(metadata_ref, 'ref_contextual_usage')
-}
-
-
-# Convert NCBI sample queries to a list of SRA run accessions
-get_ncbi_sra_runs <- function(query) {
-    if (query == '') {
-        return(NULL)
-    }
-    search_result <- rentrez::entrez_search(db = 'sra', query, retmax = 10000, use_history = TRUE)
-    starts <- seq(from = 0 , to = length(search_result$ids) - 1, by = 500)
-    summary_result <- unlist(recursive = FALSE, lapply(starts, function(start) {
-        rentrez::entrez_summary(db = 'sra', retmax = 500, retstart = start, web_history = search_result$web_history)
-    }))
-    if (length(search_result$ids) == 1) {
-        summary_result <- list(summary_result)
-    }
-    run_ids <- unlist(lapply(summary_result, function(x) {
-        if (length(x$runs) > 1) {
-            warning('The SRA accession ', x$uid, ' has multiple runs associated with it. Only the first will be used.')
-        }
-        run_xml <- x$runs[1]
-        gsub(run_xml, pattern = '.+ acc="(.+?)" .+', replacement = '\\1')
-    }))
-    sequence_instrument <- unlist(lapply(summary_result, function(x) {
-        gsub(x$expxml[1], pattern = '.+<Platform instrument_model="(.+?)">(.+?)</Platform>.+', replacement = '\\1')
-    }))
-    sequence_type <- unlist(lapply(summary_result, function(x) {
-        gsub(x$expxml[1], pattern = '.+<Platform instrument_model="(.+?)">(.+?)</Platform>.+', replacement = '\\2')
-    }))
-    name <- unlist(lapply(summary_result, function(x) {
-        gsub(x$expxml[1], pattern = '.+ ScientificName="(.+?)"/>.+', replacement = '\\1')
-    }))
-    description <- unlist(lapply(summary_result, function(x) {
-        gsub(x$expxml[1], pattern = '.+<Title>(.+?)</Title>.+', replacement = '\\1')
-    }))
-    bases <- as.numeric(unlist(lapply(summary_result, function(x) {
-        gsub(x$expxml[1], pattern = '.+ total_bases="(.+?)" .+', replacement = '\\1')
-    })))
-    output <- data.frame(
-        ncbi_accession = run_ids,
-        sequence_type = sequence_type,
-        name = name,
-        description = paste0(description, ' (', run_ids, ')'),
-        total_bases = bases
-    )
-    rownames(output) <- NULL
-    return(output)
-}
-unique_queries <- unique(metadata_samp$ncbi_query)
-unique_queries <- unique_queries[unique_queries != '']
-ncbi_result <- lapply(unique_queries, get_ncbi_sra_runs)
-names(ncbi_result) <- unique_queries
-is_query_to_use <- is_present(metadata_samp$ncbi_query) & metadata_samp$enabled
-new_sample_data <- do.call(rbind, lapply(which(is_query_to_use), function(index) {
-    query_data <- ncbi_result[[metadata_samp$ncbi_query[index]]]
-    # Remove any samples with abnormally low reads
-    query_data <- query_data[query_data$total_bases > 100000, ]
-    # subsample using ncbi_query_max
-    query_max <- metadata_samp$ncbi_query_max[index]
-    if (endsWith(query_max, '%')) {
-        query_max_prop <- as.numeric(gsub(query_max, pattern = '%$', replacement = '')) / 100
-        query_max <- max(c(1, nrow(query_data) * query_max_prop))
-    } else {
-        query_max <- min(c(nrow(query_data), as.numeric(query_max)))
-    }
-    query_data <- query_data[sample(1:nrow(query_data), query_max), ]
-    # Create output table
-    output <- metadata_samp[rep(index, nrow(query_data)), ]
-    output$sample_id <- paste0(metadata_samp$sample_id[index], query_data$ncbi_accession)
-    output$name <- paste0(metadata_samp$name[index], query_data$name)
-    output$description <- paste0(metadata_samp$description[index], query_data$description)
-    output$ncbi_accession <- query_data$ncbi_accession
-    output$sequence_type <- query_data$sequence_type
-    rownames(output) <- NULL
-    output
-}))
-metadata_samp <- rbind(
-    metadata_samp[! is_query_to_use, ],
-    new_sample_data
-)
 
 
 # Lookup SRA runs accessions for biosamples
@@ -321,78 +179,8 @@ split_metadata <- lapply(seq_len(nrow(metadata_samp)), function(i) {
 metadata_samp <- do.call(rbind, split_metadata)
 rownames(metadata_samp) <- NULL
 
-# Convert NCBI reference queries to a list of assembly accessions
-get_ncbi_genomes <- function(query) {
-    search_result <- rentrez::entrez_search(db = 'assembly', query, retmax = 10000, use_history = TRUE)
-    starts <- seq(from = 0, to = length(search_result$ids) - 1, by = 500)
-    summary_result <- unlist(recursive = FALSE, lapply(starts, function(start) {
-        rentrez::entrez_summary(db = 'assembly', retmax = 500, retstart = start, web_history = search_result$web_history)
-    }))
-    if (length(search_result$ids) == 1) {
-        summary_result <- list(summary_result)
-    }
-    acc_ids <- unlist(lapply(summary_result, function(x) {
-        run_xml <- x$assemblyaccession[1]
-        gsub(run_xml, pattern = '.+ acc="(.+?)" .+', replacement = '\\1')
-    }))
-    output <- data.frame(
-        ref_id = unlist(lapply(summary_result, function(x) x$assemblyaccession)),
-        ref_name = unlist(lapply(summary_result, function(x) paste0(x$speciesname, ' ', x$assemblyname))),
-        ref_description = unlist(lapply(summary_result, function(x) paste0(x$organism, ' ', x$assemblyname, ' (', x$assemblyaccession, ')'))),
-        ref_ncbi_accession = unlist(lapply(summary_result, function(x) x$assemblyaccession))
-    )
-    rownames(output) <- NULL
-    return(output)
-}
-unique_queries <- unique(metadata_ref$ref_ncbi_query)
-unique_queries <- unique_queries[unique_queries != '']
-ncbi_result <- lapply(unique_queries, get_ncbi_genomes)
-names(ncbi_result) <- unique_queries
-is_query_to_use <- is_present(metadata_ref$ref_ncbi_query) & metadata_ref$ref_enabled
-new_ref_data <- do.call(rbind, lapply(which(is_query_to_use), function(index) {
-    query_data <- ncbi_result[[metadata_ref$ref_ncbi_query[index]]]
-    query_max <- metadata_ref$ref_ncbi_query_max[index]
-    if (endsWith(query_max, '%')) {
-        query_max_prop <- as.numeric(gsub(query_max, pattern = '%$', replacement = '')) / 100
-        query_max <- max(c(1, nrow(query_data) * query_max_prop))
-    } else {
-        query_max <- min(c(nrow(query_data), as.numeric(query_max)))
-    }
-    query_data <- query_data[sample(1:nrow(query_data), query_max), ]
-    output <- metadata_ref[rep(index, nrow(query_data)), ]
-    output$ref_id <- paste0(metadata_ref$ref_id[index], query_data$ref_ncbi_accession)
-    output$ref_name <- paste0(metadata_ref$ref_name[index], query_data$ref_name)
-    output$ref_description <- paste0(metadata_ref$ref_description[index], query_data$ref_description)
-    output$ref_ncbi_accession <- query_data$ref_ncbi_accession
-    rownames(output) <- NULL
-    return(output)
-}))
-metadata_ref <- rbind(
-    metadata_ref[! is_query_to_use, ],
-    new_ref_data
-)
 
-# Check that required input columns have at least one value for each row
-validate_required_input <- function(metadata, required_input_columns, csv_name) {
-    validate_required_input_cols <- function(row_index, columns) {
-        values <- unlist(metadata[row_index, columns])
-        if (all(values == '' | is.na(values))) {
-            stop(call. = FALSE, paste0(
-                'At least one of the following columns in the ', csv_name, ' CSV must have a value on row ', row_index, ': ',
-                paste0('"', columns, '"', collapse = ', ')
-            ))
-        }
-    }
-    for (row_index in seq_along(rownames(metadata))) {
-        for (columns in required_input_columns) {
-            validate_required_input_cols(row_index, columns)
-        }
-    }
-}
-validate_required_input(metadata_samp, required_input_columns_samp, 'sample data')
-if (nrow(metadata_ref) > 0) {
-    validate_required_input(metadata_ref, required_input_columns_ref, 'reference data')
-}
+
 
 # Ensure sample/reference IDs are present
 shared_char <- function(col, end = FALSE) {
@@ -506,14 +294,10 @@ if (nrow(metadata_ref) > 0) {
     metadata_ref$ref_description <- ensure_sample_names(metadata_ref$ref_description, metadata_ref$ref_name)
 }
 
-# Replace any characters in IDs that cannot be present in file names
-make_ids_ok_for_file_names <- function(ids) {
-    trimws(gsub(ids, pattern = invalid_id_char_pattern, replacement = '_'))
-}
-metadata_samp$sample_id <- make_ids_ok_for_file_names(metadata_samp$sample_id)
-if (nrow(metadata_ref) > 0) {
-    metadata_ref$ref_id <- make_ids_ok_for_file_names(metadata_ref$ref_id)
-}
+
+
+
+
 
 # Ensure that the same sample ID is not used for different sets of data
 make_ids_unique <- function(metadata, id_col, other_cols) {
@@ -546,12 +330,9 @@ if (nrow(metadata_ref) > 0) {
 is_shared <- metadata_ref$ref_id %in% metadata_samp$sample_id
 metadata_ref$ref_id[is_shared] <- paste0(metadata_ref$ref_id[is_shared], '_ref')
 
-# Add a default report group for samples without a group defined
-if (all(!is_present(metadata_samp$report_group_ids))) {
-    metadata_samp$report_group_ids <- default_group_full
-} else {
-    metadata_samp$report_group_ids[!is_present(metadata_samp$report_group_ids)] <- default_group_partial
-}
+
+
+
 
 # Add reference id to the reference group ids, so that references can be referred to by id even if a group id is not defined.
 metadata_ref$ref_group_ids <- ifelse(
@@ -560,19 +341,9 @@ metadata_ref$ref_group_ids <- ifelse(
     paste(metadata_ref$ref_group_ids, metadata_ref$ref_id, sep = ';')
 )
 
-# Make report/reference group ids usable as file names
-make_group_ids_ok_for_file_names <- function(group_ids, sep = ';') {
-    unlist(lapply(group_ids, function(ids) {
-        split_ids <- strsplit(ids, split = sep)[[1]]
-        split_ids <- make_ids_ok_for_file_names(split_ids)
-        paste(split_ids, collapse = sep)
-    }))
-}
-metadata_samp$report_group_ids <- make_group_ids_ok_for_file_names(metadata_samp$report_group_ids)
-metadata_samp$ref_group_ids <- make_group_ids_ok_for_file_names(metadata_samp$ref_group_ids)
-if (nrow(metadata_ref) > 0) {
-    metadata_ref$ref_group_ids <- make_group_ids_ok_for_file_names(metadata_ref$ref_group_ids)
-}
+
+
+
 
 # Check that reference groups in sample metadata are present in the reference metadata
 if (nrow(metadata_ref)) {
@@ -591,236 +362,6 @@ if (nrow(metadata_ref)) {
     }
 }
 
-# Look up sequence type for NCBI accessions without a sequence type defined
-lookup_sequence_type <- function(id) {
-    search_result <- rentrez::entrez_search(db = 'sra', id)
-    if (length(search_result$ids) < 1) {
-        stop(call. = FALSE, paste0(
-            'Could not look up sequence type for id "', id, '". Specify it in the sample metadata CSV.'
-        ))
-    }
-    summary_result <- rentrez::entrez_summary(db = 'sra', search_result$ids)
-    if (inherits(summary_result, 'esummary_list')) {
-        xml_result <- unname(vapply(summary_result, function(x) x$expxml, FUN.VALUE = character(1)))
-    } else {
-        xml_result <- summary_result$expxml
-    }
-    seq_type <- unique(gsub(xml_result, pattern = '.+<Platform instrument_model="(.+?)">(.+?)</Platform>.+', replacement = '\\2'))
-    if (length(seq_type) != 1) {
-        stop(call. = FALSE, paste0(
-            'Could not look up sequence type for id "', id, '". Specify it in the sample metadata CSV.'
-        ))
-    }
-    return(seq_type)
-}
-to_check <- ! is_present(metadata_samp$sequence_type) & is_present(metadata_samp$ncbi_accession) & metadata_samp$enabled
-undefined_accessions <- unique(metadata_samp$ncbi_accession[to_check])
-type_replace_key <- lapply(undefined_accessions, lookup_sequence_type)
-names(type_replace_key) <- undefined_accessions
-is_undefined <- metadata_samp$ncbi_accession %in% undefined_accessions
-metadata_samp$sequence_type[is_undefined] <- unlist(type_replace_key[metadata_samp$ncbi_accession[is_undefined]])
-
-# Validate sequence_type column
-detected_seq_types <- lapply(seq_along(metadata_samp$sequence_type), function(index) {
-    user_value <- metadata_samp$sequence_type[index]
-    is_seq_type <- unlist(lapply(known_read_types, function(type) {
-        grepl(user_value, pattern = type, ignore.case = TRUE)
-    }))
-    return(known_read_types[is_seq_type])
-})
-invalid_seq_type <- vapply(detected_seq_types, length, FUN.VALUE = numeric(1)) != 1
-metadata_samp$sequence_type[! invalid_seq_type] <- unlist(detected_seq_types[! invalid_seq_type])
-metadata_samp$enabled[invalid_seq_type] <- FALSE
-
-# Report missing sequence type information
-is_invalid_seq_type_to_report <- invalid_seq_type & metadata_samp$enabled
-if (sum(invalid_seq_type) > 0) {
-    warning('The following ', sum(invalid_seq_type), ' samples had invalid, missing, multiple, or undeterminable sequence types:\n',
-            paste0('   ', metadata_samp$sample_id[invalid_seq_type], collapse = '\n'), '\n')
-    message_data <- rbind(message_data, data.frame(
-        sample_id = metadata_samp$sample_id[invalid_seq_type],
-        report_group_id = metadata_samp$report_group_ids[invalid_seq_type],
-        reference_id = NA_character_,
-        workflow = 'PREPARE_INPUT',
-        message_type = 'WARNING',
-        description = paste0('Invalid, missing, multiple, or undeterminable sequence type(s). Must be one of: ', paste0('"', known_read_types, '"', collapse = ', '))
-    ))
-}
-
-# Define functions use to manipulate locations and coordinates
-is_coordinate <- function(text) {
-    grepl(text, pattern = '^[NSWE0-9,.°"”\' -]+$')
-}
-split_coord <- function(text) {
-    split_text <- strsplit(trimws(text), split = '[, ]+')
-    lengths <- vapply(split_text, length, FUN.VALUE = numeric(1))
-    is_odd <- lengths %% 2 != 0
-    if (any(is_odd)) {
-        warning('Could not split coordinates into equal parts. Replaceing with NA.')
-        split_text[is_odd] <- rep(list(c(NA_character_, NA_character_)), sum(is_odd))
-    }
-    lapply(split_text, function(x) {
-        c(
-            paste0(x[1:(length(x) / 2)], collapse = ''),
-            paste0(x[((length(x) / 2) + 1):length(x)], collapse = '')
-        )
-    })
-}
-convert_coord_part_to_decimal_degrees <- function(coord_parts) {
-    vapply(coord_parts, FUN.VALUE = numeric(1), function(coord_part) {
-        if (is.na(coord_part) | coord_part == '') {
-            return(as.numeric(coord_part))
-        }
-        coord_part <- trimws(coord_part)
-        is_negative <- grepl(coord_part, pattern = '[SW-]+')
-        coord_part <- gsub(coord_part, pattern = '[NWSE-]+', replacement = '')
-        coord_part <- gsub(coord_part, pattern = '”', replacement = '"')
-        coord_part <- gsub(coord_part, pattern = "''", replacement = '"')
-        if (grepl(coord_part, pattern = '^[0-9.]+$')) {
-            output <- as.numeric(coord_part)
-        } else if (grepl(coord_part, pattern = "^[0-9]{1,3}°[0-9.]+'$")) {
-            subparts <- strsplit(coord_part, split = '°')[[1]]
-            degrees <- as.numeric(subparts[1])
-            minutes <- as.numeric(gsub(subparts[2], pattern = "'", replacement = ''))
-            output <- degrees + minutes / 60
-        } else if (grepl(coord_part, pattern = "^[0-9]{1,3}°[0-9.]+'[0-9.]+\"$")) {
-            subparts <- strsplit(coord_part, split = "[°']")[[1]]
-            degrees <- as.numeric(subparts[1])
-            minutes <- as.numeric(subparts[2])
-            seconds <- as.numeric(gsub(subparts[3], pattern = '"', replacement = ''))
-            output <- degrees + minutes / 60 + seconds / 3600
-        }
-        if (is_negative) {
-            output <- output * -1
-        }
-        return(output)
-    })
-}
-convert_coord_to_decimal_degrees <- function(coord_text) {
-    parts <- lapply(split_coord(coord_text), convert_coord_part_to_decimal_degrees)
-    vapply(parts, FUN.VALUE = character(1), function(x) {
-        if (any(is.na(x))) {
-            return(NA_character_)
-        }
-        paste0(x, collapse = ', ')
-    })
-}
-can_be_numeric <- function(values) {
-    ! suppressWarnings(is.na(as.numeric(as.character(values))))
-}
-is_valid_lat <- function(values) {
-    vapply(values, FUN.VALUE = logical(1), function(x) {
-        ! is_present(x) || (can_be_numeric(x) && as.numeric(x) >= -90 && as.numeric(x) <= 90)
-    })
-}
-is_valid_long <- function(values) {
-    vapply(values, FUN.VALUE = logical(1), function(x) {
-        ! is_present(x) || (can_be_numeric(x) && as.numeric(x) >= -180 && as.numeric(x) <= 180)
-    })
-}
-split_address <- function(values) {
-    strsplit(values, split = ' *, *')
-}
-
-# Parse and validate location and coordinate data
-parse_location_and_coord_data <- function(table, lat_col, long_col, loc_col) {
-    # Parse location, latitude, and longitude columns
-    loc_is_coord <- is_coordinate(table[[loc_col]]) & is_present(table[[loc_col]])
-    table[loc_is_coord, loc_col] <- convert_coord_to_decimal_degrees(table[loc_is_coord, loc_col])
-    loc_is_address <- ! loc_is_coord & is_present(table[[loc_col]])
-    location_data <- tidygeocoder::geo(address = table[loc_is_address, loc_col],
-                                       full_results = TRUE, progress_bar = FALSE,
-                                       custom_query = list("accept-language" = "en-US"))
-    location_data <- unique(location_data[! is.na(location_data$lat), , drop = FALSE])
-    table[[lat_col]] <- convert_coord_part_to_decimal_degrees(table[[lat_col]])
-    table[[long_col]] <- convert_coord_part_to_decimal_degrees(table[[long_col]])
-    
-    # Use data from the location if latitude and longitude columns are missing values
-    missing_long_lat <- ! is_present(table[[lat_col]]) | ! is_present(table[[long_col]])
-    replace_with_coord_loc <- loc_is_coord & missing_long_lat 
-    split_loc <- strsplit(table[[loc_col]], split = ', ')
-    table[replace_with_coord_loc, lat_col] <- vapply(split_loc[replace_with_coord_loc], FUN.VALUE = numeric(1), function(x) {
-        as.numeric(x[1])
-    })
-    table[replace_with_coord_loc, long_col] <- vapply(split_loc[replace_with_coord_loc], FUN.VALUE = numeric(1), function(x) {
-        as.numeric(x[2])
-    })
-    replace_with_lookup_loc <- missing_long_lat & table[[loc_col]] %in% location_data$address
-    table[replace_with_lookup_loc, lat_col] <- vapply(table[replace_with_lookup_loc, loc_col], FUN.VALUE = numeric(1), function(x) {
-        location_data$lat[location_data$address == x]
-    })
-    table[replace_with_lookup_loc, long_col] <- vapply(table[replace_with_lookup_loc, loc_col], FUN.VALUE = numeric(1), function(x) {
-        location_data$long[location_data$address == x]
-    })
-    
-    # Infer location from latitude and longitude, giving preference to parsed version of user location
-    loc_to_lookup <- is_present(table[[lat_col]]) & is_present(table[[long_col]]) 
-    coord_data <- tidygeocoder::reverse_geo(lat = table[loc_to_lookup, lat_col], long = table[loc_to_lookup, long_col],
-                                            full_results = TRUE, custom_query = list("accept-language" = "en-US"),
-                                            progress_bar = FALSE)
-    
-    
-    parsed_locations <- location_data$display_name[match(table[[loc_col]], location_data$address)]
-    table[loc_to_lookup, loc_col] <- coord_data$address
-    table[! is.na(parsed_locations), loc_col] <- parsed_locations[! is.na(parsed_locations)]
-    table[is.na(table[[loc_col]]), loc_col] <- ''
-    
-    # Add individual columns for major place name hierarchy elements
-    grouped_level_key <- list(
-        country = c('country'),
-        region = c('state', 'region'),
-        subregion = c('county', 'municipality'),
-        settlement = c('city', 'town', 'village', 'hamlet'),
-        district = c('district', 'city_district', 'subdistrict', 'place')
-    )
-    table[loc_to_lookup, names(grouped_level_key)] <- lapply(grouped_level_key, function(cols) {
-        cols <- cols[cols %in% colnames(coord_data)]
-        unlist(apply(coord_data[, cols], MARGIN = 1, simplify = FALSE, function(r) {
-            r[!is.na(r)][1]
-        }))
-    })
-    
-    # Validate sample latitude and longitude columns
-    is_invalid_lat <- ! is_valid_lat(table[[lat_col]])
-    is_invalid_long <- ! is_valid_long(table[[long_col]])
-    is_invalid_coord <- is_invalid_lat | is_invalid_long
-    table[is_invalid_coord, lat_col] <- NA
-    table[is_invalid_coord, long_col] <- NA
-    
-    return(list(table = table, is_invalid_coord = is_invalid_coord))
-}
-coord_results_samp <- parse_location_and_coord_data(metadata_samp, lat_col = 'latitude', long_col = 'longitude', loc_col = 'location')
-metadata_samp <- coord_results_samp$table
-coord_results_ref <- parse_location_and_coord_data(metadata_ref, lat_col = 'ref_latitude', long_col = 'ref_longitude', loc_col = 'ref_location')
-metadata_ref <- coord_results_ref$table
-
-# Report problems with parsing coordinates to user
-invalid_lat_long_samps <- metadata_samp$sample_id[coord_results_samp$is_invalid_coord]
-if (length(invalid_lat_long_samps) > 0) {
-    warning('The following ', length(invalid_lat_long_samps), ' samples do not have valid values for the `latitude` or `longitude` columns:\n',
-            paste0('    ', invalid_lat_long_samps, collapse = '\n'), '\n')
-    message_data <- data.frame(
-        sample_id = table$sample_id[table$sample_id %in% invalid_lat_long_samps],
-        report_group_id = table$report_group_ids[table$sample_id %in% invalid_lat_long_samps],
-        reference_id = NA_character_,
-        workflow = 'PREPARE_INPUT',
-        message_type = 'WARNING',
-        description = 'Samples do not have valid values for the `latitude` or `longitude` columns.'
-    )
-}
-invalid_lat_long_refs <- metadata_ref$ref_id[coord_results_ref$is_invalid_coord]
-if (length(invalid_lat_long_refs) > 0) {
-    warning('The following ', length(invalid_lat_long_refs), ' references do not have valid values for the `latitude` or `longitude` columns:\n',
-            paste0('    ', invalid_lat_long_refs, collapse = '\n'), '\n')
-    message_data <- rbind(message_data, data.frame(
-        sample_id = NA_character_,
-        report_group_id = NA_character_,
-        reference_id = metadata_ref$ref_id[metadata_ref$ref_id %in% invalid_lat_long_refs],
-        workflow = 'PREPARE_INPUT',
-        message_type = 'WARNING',
-        description = 'References do not have valid values for the `latitude` or `longitude` columns.'
-    ))
-}
 
 # Add row for each group for samples/references with multiple groups
 duplicate_rows_by_id_list <- function(metadata, id_col) {
@@ -844,34 +385,6 @@ metadata_samp$ref_ids <- unlist(lapply(metadata_samp$ref_group_ids, function(gro
     paste(ref_ids, collapse = ';')
 }))
 
-# Warn user if ploidy data is not specified
-no_ploidy_specified <- ! is_present(metadata_samp$ploidy)
-if (any(no_ploidy_specified)) {
-    warning(
-        'The following samples do not have a ploidy specified. Defaulting to 1 (haploid).:\n',
-        paste0(unique(metadata_samp$sample_id[no_ploidy_specified]), collapse = '\n'),
-        '\n'
-    )
-    message_data <- rbind(message_data, data.frame(
-        sample_id = metadata_samp$sample_id[no_ploidy_specified],
-        report_group_id = metadata_samp$report_group_ids[no_ploidy_specified],
-        reference_id = NA_character_,
-        workflow = 'PREPARE_INPUT',
-        message_type = 'WARNING',
-        description = 'Ploidy not specified by user, defaulting to 1 (haploid). Add a value in the "ploidy" column in the input sample data table.'
-    ))
-}
-metadata_samp$ploidy <- ifelse(no_ploidy_specified, 1, metadata_samp$ploidy)
-
-# Validate ploidy column
-for (index in 1:nrow(metadata_samp)) {
-    if (! grepl(metadata_samp$ploidy[index], pattern = '^[0-9]+$')) {
-        stop(call. = FALSE, paste0(
-            'The value for the ploidy column "', metadata_samp$ploidy[index],
-            '" of the sample metadata CSV on row ', index, ' is not numeric.'
-        ))
-    }
-}
 
 # Remove unneeded columns
 metadata_samp$ref_group_ids <- NULL
