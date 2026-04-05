@@ -1,0 +1,27 @@
+/*-- scss:rules --*/
+
+:root {
+  --bslib-spacer: 0;
+}
+
+.bslib-gap-spacing {
+  padding: 0px !important;
+  row-gap: 0px !important;
+  column-gap: 0px !important;
+}
+
+// Card/grid item padding
+.bslib-grid {
+  padding: 0px !important;
+  gap: 0px !important;
+}
+
+// Global font size reduction
+html {
+  font-size: 14px !important;
+}
+
+// Card body text
+.card-body {
+  font-size: 0.9rem !important;
+}

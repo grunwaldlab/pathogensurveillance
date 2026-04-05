@@ -1,15 +1,18 @@
 ---
-title: Pathogen Surveillance Report
-format: 
+title: ""
+format:
   dashboard:
-    orientation: rows
-    theme: journal
+    theme: [journal, custom.scss]
+    self-contained: true
+    embed-resources: true
+    logo: "images/logo.png"
     include-in-header:
       text: |
         <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
-params: 
+params:
   inputs: "C:/Users/cwpri/Downloads/test_output/test_output"
 ---
+
 ```{r load_libraries, include=FALSE}
 remotes::install_github("grunwaldlab/PathoSurveilR@dev")
 library(PathoSurveilR)
@@ -40,6 +43,7 @@ library(PathoSurveilR)
 ## Column {width=65%}
 ### Row {height=60%}
 ::: {.card}
+
 ```{r setup, include=FALSE}
 run_info <- find_ps_data(params$inputs, target = 'pipeline_run_info', simplify = TRUE)
 group <- run_info$group_id
@@ -47,8 +51,6 @@ sample_data <- find_ps_data(params$inputs, target = 'sample_metadata', simplify 
 message_data <- find_ps_data(params$inputs, target = 'messages', simplify = TRUE)
 no_messages <- nrow(message_data) == 0
 ```
-## Summary
-
 This report is produced by the [**`nf-core/pathogensurveillance`**](https://nf-co.re/pathogensurveillance) pipeline.
 
 * **Report group:** `r group`
@@ -92,15 +94,12 @@ cat('✅  **No issues reported.**')
 
 ## Details
 
+This is a list of issues reported by the pipeline during execution. When relevant, the sample IDs or reference IDs associated with the issue are included.
+
 ```{r detailed-groups-table}
 status_message_table(params$inputs, interactive = TRUE)
 ```
 
-::: {.callout-tip collapse="true"}
-## About this table
-
-A list of issues reported by the pipeline during execution. When relevant, the sample IDs or reference IDs associated with the issue are included.
-:::
 :::
 :::
 
@@ -108,6 +107,7 @@ A list of issues reported by the pipeline during execution. When relevant, the s
 ### Row {height=40%}
 ::: {.card}
 ## <i class="bi bi-clipboard-data"></i> Input Data
+
 ```{r}
 sample_meta_table(params$inputs, interactive = TRUE)
 ```
@@ -115,7 +115,6 @@ sample_meta_table(params$inputs, interactive = TRUE)
 
 ## Column {width=35%}
 ::: {.card}
-## <i class="bi bi-map"></i> Surveillance Map
 ```{r plot_map_widget, eval = !is.null(params$inputs) }
 plot_map_widget(params$inputs)
 ```
@@ -143,21 +142,6 @@ is_single_taxon <- length(unique_tax) == 1
 sendsketch_taxonomy_plot(params$inputs, interactive = TRUE)
 ```
 
-```{r, results='asis', eval = !is_single_taxon}
-cat('
-::: {.callout-tip collapse="true"}
-## About this plot
-
-This plot shows the distribution of tentative taxonomic classifications for all samples.
-Only the "highest scoring" results for each sample is considered.
-
-Hover your cursor over parts of the sunburst plot will display the number of samples in each taxon.
-Clicking on a section will subset the plot to that taxon.
-Clicking on the middle will undo the subset.
-:::
-')
-```
-
 ```{r, results='asis', eval = is_single_taxon}
 n_samp <- nrow(top_hits)
 formatted_classification <- gsub(unique_tax, pattern = "[a-z]+:", replacement = "")
@@ -176,10 +160,20 @@ cat(paste0(
 sendsketch_table(params$inputs, interactive = TRUE)
 ```
 
-::: {.callout-tip collapse="true"}
-## About this table
+### About
 
-This table shows the "highest scoring" tentative taxonomic classification for each sample.
+**Plot**
+
+The plot shows the distribution of tentative taxonomic classifications for all samples.
+Only the "highest scoring" results for each sample is considered.
+
+Hover your cursor over parts of the sunburst plot will display the number of samples in each taxon.
+Clicking on a section will subset the plot to that taxon.
+Clicking on the middle will undo the subset.
+
+**Table**
+
+The table shows the "highest scoring" tentative taxonomic classification for each sample.
 Included metrics can provide insights into how each sample compares with reference genomes on online databases and the likelihood these comparisons are valid.
 
 * **Sample:** The sample ID submitted by the user.
@@ -187,13 +181,13 @@ Included metrics can provide insights into how each sample compares with referen
 * **ANI:** An estimate of average nucleotide identity (ANI), derived from WKID and kmer length.
 * **Completeness:** The percentage of the reference genome represented in the query.
 * **Top Hit:** The name of the reference genome most similar to each sample based on the scoring criteria used.
-:::
 
 :::
 :::
 
 ### Column {width=50%}
 :::{.card}
+
 ## Most similar organisms
 
 ::: panel-tabset
@@ -203,28 +197,11 @@ Included metrics can provide insights into how each sample compares with referen
 estimated_ani_match_table(params$inputs, interactive = TRUE)
 ```
 
-::: {.callout-tip collapse="true"}
-## About this table
-
-This table shows the Average Nucleotide Identity (ANI) between each sample and the two references most similar to it based on this measure.
-ANI is used to measure how similar the shared portion of two genomes are.
-Note that this measure only takes into account the shared portion of genomes, so differences like extra plasmids or chromosomal duplications are not taken into account.
-:::
-
-
 ### ANI heatmap
 
 ```{r ani_heatmap}
 estimated_ani_heatmap(params$inputs, interactive = TRUE, height = 1000, width = 1000)
 ```
-
-::: {.callout-tip collapse="true"}
-## About this plot
-
-This plot shows the results of comparing the similarity of all samples and references to each other.
-These similarity metrics are based on the presence and abundance of short exact sequence matches between samples (i.e. comparisons of k-mer sketches).
-These measurements are not as reliable as the methods used to create phylogenetic trees, but may be useful if phylogenetic trees could not be inferred for these samples.
-:::
 
 
 ### POCP top matches
@@ -238,23 +215,9 @@ pocp_matrix <- find_ps_data(params$inputs, target = 'pocp', simplify = TRUE)
 pocp_match_table(params$inputs, interactive = TRUE)
 ```
 
-```{r, results = 'asis', eval = ! is.null(pocp_path_data)}
-cat('
-::: {.callout-tip collapse="true"}
-## About this table
-
-This table shows the Percentage Of Conserved Proteins (POCP) between each sample and the 2 references most similar to it based on this measure.
-POCP is used to measure the proportion of proteins shared between two genomes.
-Which proteins are shared is determined from pairwise comparisons of all proteins between all genomes.
-The POCP between two genomes is the sum of the number of shared proteins in each genome divided by the sum of the number of total proteins in each genome [@qin2014proposed].
-Currently, POCP is only calculated for Prokaryotes.
-:::
-')
-```
-
 ```{r, results='asis', eval = is.null(pocp_path_data)}
 cat('
-POPC not calculated.
+POCP not calculated.
 ')
 ```
 
@@ -265,25 +228,24 @@ POPC not calculated.
 pocp_heatmap(params$inputs, interactive = TRUE, height = 1000, width = 1000)
 ```
 
-```{r, results='asis', eval = ! is.null(pocp_path_data)}
-cat('
-::: {.callout-tip collapse="true"}
-## About this plot
-
-This plot shows the results of comparing the protein content of all samples and references to each other.
-POCP is used to measure the proportion of proteins shared between two genomes.
-Which proteins are shared is determined from pairwise comparisons of all proteins between all genomes.
-The POCP between two genomes is the sum of the number of shared proteins in each genome divided by the sum of the number of total proteins in each genome [@qin2014proposed].
-Currently, POCP is only calculated for Prokaryotes.
-:::
-')
-```
-
 ```{r, results='asis', eval =  is.null(pocp_path_data)}
 cat('
-POPC not calculated.
+POCP not calculated.
 ')
 ```
+
+### About
+**About ANI Top Matches:** This table shows the Average Nucleotide Identity (ANI) between each sample and the two references most similar to it based on this measure.
+ANI is used to measure how similar the shared portion of two genomes are.
+Note that this measure only takes into account the shared portion of genomes, so differences like extra plasmids or chromosomal duplications are not taken into account.
+
+**About ANI Heatmap:** This plot shows the results of comparing the similarity of all samples and references to each other. These similarity metrics are based on the presence and abundance of short exact sequence matches between samples (i.e. comparisons of k-mer sketches).
+These measurements are not as reliable as the methods used to create phylogenetic trees, but may be useful if phylogenetic trees could not be inferred for these samples.
+
+**About POCP Top Matches:** This table shows the Percentage Of Conserved Proteins (POCP) between each sample and the 2 references most similar to it based on this measure. POCP is used to measure the proportion of proteins shared between two genomes. Which proteins are shared is determined from pairwise comparisons of all proteins between all genomes. The POCP between two genomes is the sum of the number of shared proteins in each genome divided by the sum of the number of total proteins in each genome [@qin2014proposed]. Currently, POCP is only calculated for Prokaryotes.
+
+**About POCP Heatmap:** This plot shows the results of comparing the protein content of all samples and references to each other. POCP is used to measure the proportion of proteins shared between two genomes. Which proteins are shared is determined from pairwise comparisons of all proteins between all genomes. The POCP between two genomes is the sum of the number of shared proteins in each genome divided by the sum of the number of total proteins in each genome [@qin2014proposed].
+Currently, POCP is only calculated for Prokaryotes.
 :::
 :::
 
@@ -291,12 +253,30 @@ POPC not calculated.
 
 ### Column {width=50%}
 :::{.card}
-### Phylogenetic Context
+### Multigene Phylogeny
+```{r}
+htmltools::HTML('
+  <style>
+    .card-header { position: relative; }
+  </style>
+  <button type="button" 
+    style="position: absolute; top: 0.5rem; right: 3rem;"
+    class="btn btn-sm btn-outline-secondary"
+    data-bs-toggle="popover" data-bs-trigger="click focus"
+    data-bs-placement="left" data-bs-html="true"
+    data-bs-content="Shown are phylogenetic trees of samples with reference sequences meant to provide a reliable identification using genome-scale data.
+The accuracy of this identification depends on the presence of close reference sequences in RefSeq and the accuracy of the initial identification.">
+    <i class="bi bi-info-circle"></i>
+  </button>
+  <script>
+    document.addEventListener("DOMContentLoaded", function() {
+      var popovers = document.querySelectorAll("[data-bs-toggle=popover]");
+      popovers.forEach(function(el) { new bootstrap.Popover(el); });
+    });
+  </script>
+')
+```
 
-Shown are phylogenetic trees of samples with references sequences downloaded from [RefSeq](https://www.ncbi.nlm.nih.gov/refseq/) meant to provide a reliable identification using genome-scale data.
-The accuracy of this identification depends on the presence of close reference sequences in RefSeq and the accuracy of the initial identification.
-
-### Multigene phylogeny
 
 ```{r}
 has_multigene_tree <- ! is.null(PathoSurveilR::find_ps_paths(params$inputs, target = 'multigene_tree', must_exist = F))
@@ -304,17 +284,6 @@ has_multigene_tree <- ! is.null(PathoSurveilR::find_ps_paths(params$inputs, targ
 
 ```{r plot_multigene_tree, eval=has_multigene_tree, fig.height=8}
 plot_tree(params$inputs, target = 'multigene_tree')
-```
-
-```{r, results='asis', eval = has_multigene_tree}
-cat('
-::: {.callout-tip collapse="true"}
-## About this plot
-
-This is a multigene phylogeny of samples with reference genomes for context.
-It is the most robust identification provided by this pipeline, but taxonomic coverage is still limited by the availability of similar reference sequences.
-:::
-')
 ```
 
 ```{r, results='asis', eval = !has_multigene_tree}
@@ -329,6 +298,34 @@ Could not generate core genome phylogeny.
 ## Row {height=100%}
 :::{.card}
 ## <i class="bi bi-share"></i> Minimum spanning network
+
+```{r}
+htmltools::HTML('
+  <style>
+    .card-header { position: relative; }
+  </style>
+  <button type="button" 
+    style="position: absolute; top: 0.5rem; right: 3rem;"
+    class="btn btn-sm btn-outline-secondary"
+    data-bs-toggle="popover" data-bs-trigger="click focus"
+    data-bs-placement="left" data-bs-html="true"
+    data-bs-content="This figure depicts a minimium spanning network (MSN).
+The nodes represent unique multiocus genotypes, and the size of nodes is proportional to the # number of samples that share the same genotype.
+
+The edges represent the SNP differences between two given genotypes, and the darker the color of the edges, the fewer SNP differences between the two.
+
+Note: within these MSNs, edge lengths are not proportional to SNP differences.">
+    <i class="bi bi-info-circle"></i>
+  </button>
+  <script>
+    document.addEventListener("DOMContentLoaded", function() {
+      var popovers = document.querySelectorAll("[data-bs-toggle=popover]");
+      popovers.forEach(function(el) { new bootstrap.Popover(el); });
+    });
+  </script>
+')
+```
+
 ```{r}
 align_data <- find_ps_paths(params$inputs, target = 'variants_fasta', simplify = TRUE, must_exist = FALSE)
 ```
@@ -343,7 +340,7 @@ sample_data <- find_ps_data(params$inputs, target = 'sample_metadata', simplify 
 ref_data <- find_ps_data(params$inputs, target = 'reference_metadata', simplify = TRUE)
 ```
 
-```{r plot_msns, results='asis', eval = ! is.null(align_data) && nrow(align_data) > 0}
+```{r plot_msns, results='asis', eval = ! is.null(align_data) && nrow(align_data) > 0, cache=TRUE}
 # Find which columns are used to provide colors to the trees, if any
 ids_used <- unique(unlist(lapply(alignments, function(a) {
     if (is.null(a)) {
@@ -372,23 +369,6 @@ if (length(color_by_cols) > 0) {
 print_figures_with_selector(plot_one, selector = plot_vars, id_prefix = 'snp-msn', width = 1500, height = 1200, res = 175)
 ```
 
-
-```{r, results='asis', eval = ! is.null(align_data) && nrow(align_data) > 0}
-cat('
-::: {.callout-tip collapse="true"}
-
-## About this plot
-
-This figure depicts a minimium spanning network (MSN).
-The nodes represent unique multiocus genotypes, and the size of nodes is proportional to the # number of samples that share the same genotype.
-
-The edges represent the SNP differences between two given genotypes, and the darker the color of the edges, the fewer SNP differences between the two.
-
-Note: within these MSNs, edge lengths are not proportional to SNP differences.
-:::
-')
-```
-
 ```{r, results='asis', eval = is.null(align_data) || nrow(align_data) == 0}
 cat('
 Could not generate minimum spanning networks.
@@ -403,23 +383,35 @@ See staus messages at the start of the report for details.
 ## SNP trees
 
 ```{r}
+htmltools::HTML('
+  <style>
+    .card-header { position: relative; }
+  </style>
+  <button type="button" 
+    style="position: absolute; top: 0.5rem; right: 3rem;"
+    class="btn btn-sm btn-outline-secondary"
+    data-bs-toggle="popover" data-bs-trigger="click focus"
+    data-bs-placement="left" data-bs-html="true"
+    data-bs-content="This is a representation of a Single Nucleotide Polymorphism (SNP) tree, depicting the genetic relationships among samples in comparison to a reference assembly.
+
+The tree is less robust than a core gene phylogeny and cannot offer insights on evolutionary relationships among strains, but it does offer one way to visualize the genetic diversity among samples, with genetically similar strains clustering together.">
+    <i class="bi bi-info-circle"></i>
+  </button>
+  <script>
+    document.addEventListener("DOMContentLoaded", function() {
+      var popovers = document.querySelectorAll("[data-bs-toggle=popover]");
+      popovers.forEach(function(el) { new bootstrap.Popover(el); });
+    });
+  </script>
+')
+```
+
+```{r}
 snp_tree_path_data <- find_ps_paths(params$inputs, target = 'variant_tree', must_exist = FALSE)
 ```
 
 ```{r plot_snp_trees, eval = ! is.null(snp_tree_path_data), fig.height=8}
 plot_tree(params$inputs, target = 'variant_tree')
-```
-
-```{r, results='asis', eval = ! is.null(snp_tree_path_data)}
-cat('
-::: {.callout-tip collapse="true"}
-## About this plot
-
-This is a representation of a Single Nucleotide Polymorphism (SNP) tree, depicting the genetic relationships among samples in comparison to a reference assembly.
-
-The tree is less robust than a core gene phylogeny and cannot offer insights on evolutionary relationships among strains, but it does offer one way to visualize the genetic diversity among samples, with genetically similar strains clustering together.
-:::
-')
 ```
 
 ```{r results='asis', eval = is.null(snp_tree_path_data)}
@@ -525,9 +517,10 @@ To contribute, provide feedback, or report bugs please visit our [github reposit
 
 Please cite this pipeline and nf-core in publications as follows:
 
-{{< bi file-earmark-pdf-fill >}} Foster, ZSL, Sudermann, MA, Parada Rojas, CH, Blair, LK, Iruegas Bocardo, F, Dhakal, U, Weisberg, AJ, Phan, H, Chang, JH, Grunwald, NJ. **PathogenSurveillance: an automated pipeline for population genomic analyses and pathogen identification.** BioRxiv 2025 2025.10.31.685798. doi: https://doi.org/10.1101/2025.10.31.685798
+<i class="bi bi-file-earmark-pdf-fill"></i> Foster, ZSL, Sudermann, MA, Parada Rojas, CH, Blair, LK, Iruegas Bocardo, F, Dhakal, U, Weisberg, AJ, Phan, H, Chang, JH, Grunwald, NJ. **PathogenSurveillance: an automated pipeline for population genomic analyses and pathogen identification.** BioRxiv 2025 2025.10.31.685798. doi: https://doi.org/10.1101/2025.10.31.685798
 
-{{< bi file-earmark-pdf-fill >}} Di Tommaso, Paolo, Maria Chatzou, Evan W Floden, Pablo Prieto Barja, Emilio Palumbo, and Cedric Notredame. 2017. Nextflow Enables Reproducible Computational Workflows. Nature Biotechnology 35: 316--19. [https://doi.org/10.1038/nbt.3820](https://doi.org/10.1038/nbt.3820).
+
+<i class="bi bi-file-earmark-pdf-fill"></i> Di Tommaso, Paolo, Maria Chatzou, Evan W Floden, Pablo Prieto Barja, Emilio Palumbo, and Cedric Notredame. 2017. Nextflow Enables Reproducible Computational Workflows. Nature Biotechnology 35: 316--19. [https://doi.org/10.1038/nbt.3820](https://doi.org/10.1038/nbt.3820).
 
 ### <i class="bi bi-wrench-adjustable"></i> Other tools
 
