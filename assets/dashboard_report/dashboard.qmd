@@ -23,6 +23,10 @@ library(PathoSurveilR)
   background-color: #d4edda !important;
   color: black !important;
 }
+
+.bslib-value-box {
+  margin: 4px 4px;
+}
   
 .navbar .nav-link, 
 .navbar .navbar-nav .nav-link,
@@ -40,9 +44,7 @@ library(PathoSurveilR)
 ```
 
 # Summary {orientation="columns"}
-## Column {width=65%}
-### Row {height=60%}
-::: {.card}
+## Column {width=20%}
 
 ```{r setup, include=FALSE}
 run_info <- find_ps_data(params$inputs, target = 'pipeline_run_info', simplify = TRUE)
@@ -51,74 +53,44 @@ sample_data <- find_ps_data(params$inputs, target = 'sample_metadata', simplify 
 message_data <- find_ps_data(params$inputs, target = 'messages', simplify = TRUE)
 no_messages <- nrow(message_data) == 0
 ```
-This report is produced by the [**`nf-core/pathogensurveillance`**](https://nf-co.re/pathogensurveillance) pipeline.
 
-* **Report group:** `r group`
-* **Sample count:** `r nrow(sample_data)`
-* **Last updated:** `r format(Sys.time(), '%B %d, %Y')`
-* **Pipeline version:** {{< var version >}}
-
-### <i class="bi bi-info-circle"></i> Pipeline Status
-
-The pipeline finished execution.
-Warning or error messages describing problems encountered in the analysis might be provided below.
-
-```{r}
-message_data <- find_ps_data(params$inputs, target = 'messages', simplify = TRUE)
-no_messages = nrow(message_data) == 0
-```
-
-::: {.panel-tabset}
-
-## Summary
-
-```{r, eval=!no_messages}
-status_message_table(params$inputs, summarize_by = 'workflow', interactive = TRUE)
-```
-
-```{r, eval=!no_messages, results='asis'}
-cat(
-'
-::: {.callout-tip collapse="true"}
-## About this table
-
-The number and severity of issues experienced by the pipeline.
+::: {.valuebox title="Pipeline Version" color=#d4edda}
+{{< var version >}}
 :::
+
+::: {.valuebox title="Sample Count" color=#d4edda}
+`r nrow(sample_data)`
+:::
+
+::: {.valuebox title="Last Updated" color=#d4edda }
+`r format(Sys.time(), '%B %d, %Y')`
+:::
+
+
+## Column {width=40%}
+::: {.card}
+```{r}
+has_multigene_tree <- ! is.null(PathoSurveilR::find_ps_paths(params$inputs, target = 'multigene_tree', must_exist = F))
+```
+
+```{r plot_multigene_tree, eval=has_multigene_tree, fig.height=8}
+plot_tree(params$inputs, target = 'multigene_tree')
+```
+
+```{r, results='asis', eval = !has_multigene_tree}
+cat('
+Could not generate core genome phylogeny.
 ')
 ```
-
-```{r, results='asis', eval=no_messages}
-cat('✅  **No issues reported.**')
-```
-
-
-## Details
-
-This is a list of issues reported by the pipeline during execution. When relevant, the sample IDs or reference IDs associated with the issue are included.
-
-```{r detailed-groups-table}
-status_message_table(params$inputs, interactive = TRUE)
-```
-
-:::
 :::
 
-
-### Row {height=40%}
-::: {.card}
-## <i class="bi bi-clipboard-data"></i> Input Data
-
-```{r}
-sample_meta_table(params$inputs, interactive = TRUE)
-```
-:::
-
-## Column {width=35%}
+## Column {width=40%}
 ::: {.card}
 ```{r plot_map_widget, eval = !is.null(params$inputs) }
 plot_map_widget(params$inputs)
 ```
 :::
+
 
 # Identification
 
@@ -249,133 +221,11 @@ Currently, POCP is only calculated for Prokaryotes.
 :::
 :::
 
-# Phylogenetic Context
-
-### Column {width=50%}
-:::{.card}
-### Multigene Phylogeny
-```{r}
-htmltools::HTML('
-  <style>
-    .card-header { position: relative; }
-  </style>
-  <button type="button" 
-    style="position: absolute; top: 0.5rem; right: 3rem;"
-    class="btn btn-sm btn-outline-secondary"
-    data-bs-toggle="popover" data-bs-trigger="click focus"
-    data-bs-placement="left" data-bs-html="true"
-    data-bs-content="Shown are phylogenetic trees of samples with reference sequences meant to provide a reliable identification using genome-scale data.
-The accuracy of this identification depends on the presence of close reference sequences in RefSeq and the accuracy of the initial identification.">
-    <i class="bi bi-info-circle"></i>
-  </button>
-  <script>
-    document.addEventListener("DOMContentLoaded", function() {
-      var popovers = document.querySelectorAll("[data-bs-toggle=popover]");
-      popovers.forEach(function(el) { new bootstrap.Popover(el); });
-    });
-  </script>
-')
-```
-
-
-```{r}
-has_multigene_tree <- ! is.null(PathoSurveilR::find_ps_paths(params$inputs, target = 'multigene_tree', must_exist = F))
-```
-
-```{r plot_multigene_tree, eval=has_multigene_tree, fig.height=8}
-plot_tree(params$inputs, target = 'multigene_tree')
-```
-
-```{r, results='asis', eval = !has_multigene_tree}
-cat('
-Could not generate core genome phylogeny.
-')
-```
-:::
-
 # Genetic Diversity
 
 ## Row {height=100%}
 :::{.card}
-## <i class="bi bi-share"></i> Minimum spanning network
 
-```{r}
-htmltools::HTML('
-  <style>
-    .card-header { position: relative; }
-  </style>
-  <button type="button" 
-    style="position: absolute; top: 0.5rem; right: 3rem;"
-    class="btn btn-sm btn-outline-secondary"
-    data-bs-toggle="popover" data-bs-trigger="click focus"
-    data-bs-placement="left" data-bs-html="true"
-    data-bs-content="This figure depicts a minimium spanning network (MSN).
-The nodes represent unique multiocus genotypes, and the size of nodes is proportional to the # number of samples that share the same genotype.
-
-The edges represent the SNP differences between two given genotypes, and the darker the color of the edges, the fewer SNP differences between the two.
-
-Note: within these MSNs, edge lengths are not proportional to SNP differences.">
-    <i class="bi bi-info-circle"></i>
-  </button>
-  <script>
-    document.addEventListener("DOMContentLoaded", function() {
-      var popovers = document.querySelectorAll("[data-bs-toggle=popover]");
-      popovers.forEach(function(el) { new bootstrap.Popover(el); });
-    });
-  </script>
-')
-```
-
-```{r}
-align_data <- find_ps_paths(params$inputs, target = 'variants_fasta', simplify = TRUE, must_exist = FALSE)
-```
-
-```{r eval = ! is.null(align_data)}
-threshold_options <- c(0.0001, 0.001, 0.01, 0.1)
-alignments <- find_ps_data(params$inputs, target = 'variants_fasta')
-alignments <- alignments[!unlist(lapply(alignments, is.null))]
-alignments <- alignments[unlist(lapply(alignments, nrow)) > 3]
-align_data <- align_data[align_data$path %in% names(alignments), ]
-sample_data <- find_ps_data(params$inputs, target = 'sample_metadata', simplify = TRUE)
-ref_data <- find_ps_data(params$inputs, target = 'reference_metadata', simplify = TRUE)
-```
-
-```{r plot_msns, results='asis', eval = ! is.null(align_data) && nrow(align_data) > 0, cache=TRUE}
-# Find which columns are used to provide colors to the trees, if any
-ids_used <- unique(unlist(lapply(alignments, function(a) {
-    if (is.null(a)) {
-        return(character(0))
-    } else {
-        return(rownames(a))
-    }
-})))
-color_by_text <- as.character(sample_data$color_by[sample_data$sample_id %in% ids_used])
-color_by_cols <- unique(unlist(strsplit(color_by_text, split = ';')))
-color_by_cols <- color_by_cols[! is.na(color_by_cols)]
-
-plot_one <- function(ref_id, threshold, color_by = NULL) {
-    align <- alignments[[align_data$path[align_data$reference_id == ref_id]]]
-    align_without_ref <- align[rownames(align) != ref_id, ]
-    PathoSurveilR:::make_MSN(align_without_ref, sample_data, user_seed = 1, snp_diff_prop = threshold, population = color_by)
-}
-
-plot_vars <- list(
-    Reference = align_data$reference_id,
-    Threshold = threshold_options
-)
-if (length(color_by_cols) > 0) {
-    plot_vars$Color = unlist(color_by_cols)
-}
-print_figures_with_selector(plot_one, selector = plot_vars, id_prefix = 'snp-msn', width = 1500, height = 1200, res = 175)
-```
-
-```{r, results='asis', eval = is.null(align_data) || nrow(align_data) == 0}
-cat('
-Could not generate minimum spanning networks.
-This can happen when there are too few samples or too few SNPs.
-See staus messages at the start of the report for details.
-')
-```
 :::
 
 ### Column {width=50%}
