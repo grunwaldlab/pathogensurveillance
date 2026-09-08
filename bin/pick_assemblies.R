@@ -99,12 +99,12 @@ if (only_binomial) {
 }
 
 # Deduplicate by core assembly ID, preferring RefSeq (GCF_) and higher version numbers
-core_id <- sub(assem_data$accession, pattern = '^[A-Z]+_([0-9]+)\\.[0-9]+$', replacement = '\\1')
 version <- as.numeric(sub(assem_data$accession, pattern = '^[A-Z]+_[0-9]+\\.([0-9]+)$', replacement = '\\1'))
 is_refseq <- startsWith(assem_data$accession, 'GCF_')
 # Sort so best version of each core is first
 priority <- order(is_refseq, version, assem_data$accession, decreasing = TRUE)
 assem_data <- assem_data[priority, , drop = FALSE]
+core_id <- sub(assem_data$accession, pattern = '^[A-Z]+_([0-9]+)\\.[0-9]+$', replacement = '\\1')
 assem_data <- assem_data[! duplicated(core_id), , drop = FALSE]
 
 # Parse "count" arguments which can be a number or a percentage
