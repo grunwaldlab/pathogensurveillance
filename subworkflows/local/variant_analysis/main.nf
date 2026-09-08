@@ -226,7 +226,6 @@ workflow VARIANT_ANALYSIS {
     vcf           = vcf         // report_meta, ref_meta, fasta
     results       = results     // report_meta, ref_meta, vcf, align, tree
     mapping_ref   = ASSIGN_MAPPING_REFERENCE.out.samp_ref_pairs // report_meta, tsv
-    ani_matrix    = ASSIGN_MAPPING_REFERENCE.out.ani_matrix // report_meta, csv
     messages      = messages    // meta, report_meta, ref_meta, workflow, level, message
 
 }

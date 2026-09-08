@@ -2,10 +2,10 @@ process PICK_ASSEMBLIES {
     tag "$meta.id"
     label 'process_single'
 
-    conda "conda-forge::quarto=1.6.41 bioconda::r-pathosurveilr=0.4.7"
+    conda "conda-forge::quarto=1.6.41 bioconda::r-pathosurveilr=0.4.8"
     container "${ workflow.containerEngine in ['singularity', 'apptainer'] && !task.ext.singularity_pull_docker_container ?
-        'https://community-cr-prod.seqera.io/docker/registry/v2/blobs/sha256/ec/ec0e2ca110b9875eab3997bac2682b5735bcbff78a6025b98816dd016685bdd4/data':
-        'community.wave.seqera.io/library/r-pathosurveilr_quarto:dc06886ee7b6ddcd' }"
+        'https://community-cr-prod.seqera.io/docker/registry/v2/blobs/sha256/e4/e487168aaa5f7b7a2dfabc1f308869fac1c466ab6bd34acd7a3715d927337c74/data':
+        'community.wave.seqera.io/library/r-pathosurveilr_quarto:d4f39be8e8ae4734' }"
 
     input:
     tuple val(meta), path(found_taxa), path(child_taxa), path(assem_data_tsvs), val(excluded_accessions)

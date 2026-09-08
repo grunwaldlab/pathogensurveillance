@@ -50,6 +50,6 @@ workflow SKETCH_COMPARISON {
     )
 
     emit:
-    ani_matrix    = SOURMASH_PAIRWISE.out.csv                   // group_meta, csv
+    pairwise_csv  = SOURMASH_PAIRWISE.out.csv                   // group_meta, csv
     messages      = messages                                    // meta, group_meta, ref_meta, workflow, level, message
 }

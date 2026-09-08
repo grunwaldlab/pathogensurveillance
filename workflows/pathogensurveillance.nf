@@ -64,7 +64,7 @@ workflow PATHOGENSURVEILLANCE {
     // Call variants and create SNP-tree and minimum spanning nextwork
     VARIANT_ANALYSIS (
         PREPARE_INPUT.out.sample_data,
-        SKETCH_COMPARISON.out.ani_matrix
+        SKETCH_COMPARISON.out.pairwise_csv
     )
     messages = messages.mix(VARIANT_ANALYSIS.out.messages)
 
@@ -72,7 +72,7 @@ workflow PATHOGENSURVEILLANCE {
     if (!params.skip_core_phylogeny) {
         CORE_GENOME_PHYLOGENY (
             PREPARE_INPUT.out.sample_data,
-            SKETCH_COMPARISON.out.ani_matrix,
+            SKETCH_COMPARISON.out.pairwise_csv,
             GENOME_ASSEMBLY.out.scaffolds
         )
         messages  = messages.mix(CORE_GENOME_PHYLOGENY.out.messages)
@@ -88,7 +88,7 @@ workflow PATHOGENSURVEILLANCE {
     // Read2tree BUSCO phylogeny for eukaryotes
     BUSCO_PHYLOGENY (
         PREPARE_INPUT.out.sample_data,
-        SKETCH_COMPARISON.out.ani_matrix,
+        SKETCH_COMPARISON.out.pairwise_csv,
         GENOME_ASSEMBLY.out.scaffolds
     )
     messages = messages.mix(BUSCO_PHYLOGENY.out.messages)
@@ -279,7 +279,7 @@ workflow PATHOGENSURVEILLANCE {
         .join(sendsketch_hits, remainder: true)
         .join(ncbi_ref_meta, remainder: true)
         .join(selected_ref_meta, remainder: true)
-        .join(VARIANT_ANALYSIS.out.ani_matrix, remainder: true)
+        .join(SKETCH_COMPARISON.out.pairwise_csv, remainder: true)
         .join(VARIANT_ANALYSIS.out.mapping_ref, remainder: true)
         .join(snp_align, remainder: true)
         .join(snp_phylogeny, remainder: true)
