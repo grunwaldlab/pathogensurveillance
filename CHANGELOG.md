@@ -32,6 +32,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) 
 - Prevent PIRATE and BUSCO phylogeny analyses from running on references associated with samples whose assemblies failed.
 - Prevent `SOURMASH_PAIRWISE` from running on report groups that have no successful assemblies.
 - Fixed intermittent PIRATE 'input file name collision' error
+- Fixed non-deterministic selection of downloaded reference assemblies.
 - Reference NCBI assemblies excluded by the user are no longer downloaded.
 - When multiple assembly versions exist for the same organism (e.g. GCA_000230695.1 vs GCA_000230695.3, or GCA vs GCF), only the best version is retained. RefSeq (GCF) is preferred over GenBank (GCA), and higher version numbers are preferred.
 - Handle numeric-only sample IDs by casting to string.

@@ -103,7 +103,7 @@ core_id <- sub(assem_data$accession, pattern = '^[A-Z]+_([0-9]+)\\.[0-9]+$', rep
 version <- as.numeric(sub(assem_data$accession, pattern = '^[A-Z]+_[0-9]+\\.([0-9]+)$', replacement = '\\1'))
 is_refseq <- startsWith(assem_data$accession, 'GCF_')
 # Sort so best version of each core is first
-priority <- order(is_refseq, version, decreasing = TRUE)
+priority <- order(is_refseq, version, assem_data$accession, decreasing = TRUE)
 assem_data <- assem_data[priority, , drop = FALSE]
 assem_data <- assem_data[! duplicated(core_id), , drop = FALSE]
 
@@ -121,19 +121,20 @@ get_count <- function(choices, count) {
 # Extract version number for sorting preference
 version_num <- as.numeric(sub(assem_data$accession, pattern = '^[A-Z]+_[0-9]+\\.([0-9]+)$', replacement = '\\1'))
 # Sort references by desirability
-priority <- order(decreasing = TRUE,
-    assem_data$is_atypical == FALSE,
-    assem_data$is_type, # Is type strain
-    assem_data$source_database == 'SOURCE_DATABASE_REFSEQ', # Is a RefSeq reference
-    version_num, # Prefer higher version numbers
-    is_latin_binomial(assem_data$species), # Has a species epithet
-    assem_data$is_annotated,
-    factor(assem_data$assembly_level, levels = c("Contig", "Scaffold", "Chromosome", "Complete Genome"), ordered = TRUE),
-    assem_data$checkm_completeness,
-    -1 * assem_data$checkm_contamination,
-    assem_data$contig_l50,
-    assem_data$coverage
-)
+    priority <- order(decreasing = TRUE,
+        assem_data$is_atypical == FALSE,
+        assem_data$is_type, # Is type strain
+        assem_data$source_database == 'SOURCE_DATABASE_REFSEQ', # Is a RefSeq reference
+        version_num, # Prefer higher version numbers
+        is_latin_binomial(assem_data$species), # Has a species epithet
+        assem_data$is_annotated,
+        factor(assem_data$assembly_level, levels = c("Contig", "Scaffold", "Chromosome", "Complete Genome"), ordered = TRUE),
+        assem_data$checkm_completeness,
+        -1 * assem_data$checkm_contamination,
+        assem_data$contig_l50,
+        assem_data$coverage,
+        assem_data$accession
+    )
 assem_data <- assem_data[priority, , drop = FALSE]
 
 # Initialize column to hold which level an assembly is selected for
@@ -163,7 +164,8 @@ select_for_rank <- function(assem_data, query_taxa, rank, subrank, count_per_ran
         selection_priority <- order(decreasing = TRUE,
             is_ambiguous(names(selected)) == FALSE,
             subtaxa_count,
-            -mean_index
+            -mean_index,
+            names(selected)
         )
         selected <- selected[selection_priority]
         selected <- selected[seq_len(min(c(count_per_rank, length(selected))))]
