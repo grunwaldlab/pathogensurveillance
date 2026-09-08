@@ -12,7 +12,7 @@ process BBMAP_SENDSKETCH {
 
     output:
     tuple val(meta), path("*.txt")  , emit: hits
-    tuple val("${task.process}"), val('bbmap'), eval('bbversion.sh | grep -v "Duplicate cpuset"'), emit: versions_bbmap, topic: versions
+    tuple val("${task.process}"), val('bbmap'), eval('bbversion.sh | grep -E "^[0-9]"'), emit: versions_bbmap, topic: versions
 
     when:
     task.ext.when == null || task.ext.when

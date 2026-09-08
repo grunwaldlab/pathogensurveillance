@@ -891,7 +891,7 @@
             "category": "Sketch analysis",
             "primary": true,
             "parsers": {
-                "r": "PathoSurveilR:::parse_matrix_csv"
+                "r": "PathoSurveilR:::parse_ani_csv"
             },
             "combiners": {
                 "r": "PathoSurveilR:::combine_matrices"
@@ -899,7 +899,7 @@
             "sources": [
                 {
                     "path": "sketch_comparisons/ani_matricies",
-                    "pattern": "^(.+?)_ani_matrix\\.csv$",
+                    "pattern": "^(.+?)_pairwise\\.csv$",
                     "capture_groups": ["report_id"]
                 }
             ]

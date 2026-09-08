@@ -26,7 +26,7 @@
 # Parse inputs
 args <- commandArgs(trailingOnly = TRUE)
 args <- as.list(args)
-names(args) <- c("ani_matrix", "samp_ref_pairs", "out_path", "start_min_ani", "csv_output_path")
+names(args) <- c("ani_matrix", "samp_ref_pairs", "out_path", "start_min_ani")
 start_min_ani <- as.numeric(args$start_min_ani) # The minimum ANI for a reference to be assigned to a samples
 end_min_ani <- max(c(0, start_min_ani - 0.3)) # How low the minimum can go if no samples can be assigned
 ani_interval <- 0.05 # How much the minimum ANI threshold changes each time it is decreased
@@ -39,7 +39,6 @@ ani_matrix <- matrix(0, nrow = length(all_names), ncol = length(all_names),
 ani_matrix[cbind(pw$query_name, pw$match_name)] <- pw$average_containment_ani
 ani_matrix[lower.tri(ani_matrix)] <- t(ani_matrix)[lower.tri(ani_matrix)]
 diag(ani_matrix) <- 1
-write.csv(ani_matrix, args$csv_output_path, row.names = FALSE)
 
 # Read file with info on which samples are assigned to which references
 samp_ref_pairs <- read.csv(args$samp_ref_pairs, header = FALSE, col.names = c("sample_id", "ref_id", "ref_name", "ref_desc", "usage"), sep = '\t')
