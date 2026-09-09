@@ -3,7 +3,9 @@ process PARSE_ASSEMBLIES {
     label 'process_single'
 
     conda "conda-forge::r-rcppsimdjson=0.1.12"
-    container "quay.io/nf-core/rcppsimdjson:0.2"
+    container "${ workflow.containerEngine in ['singularity', 'apptainer'] && !task.ext.singularity_pull_docker_container ?
+        'https://community-cr-prod.seqera.io/docker/registry/v2/blobs/sha256/1e/1e78da6657c8abaa07c228d7528b85e841d5f4bc9d0b276d7eef658a8a85a819/data' :
+        'community.wave.seqera.io/library/r-rcppsimdjson:0.1.12--61f5cb2fd0b45fdd' }"
 
     input:
     tuple val(taxon), path(json)

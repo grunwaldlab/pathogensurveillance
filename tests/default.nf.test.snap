@@ -137,7 +137,7 @@
                     "r-PathoSurveilR": "1.2.1"
                 },
                 "PARSE_ASSEMBLIES": {
-                    "r-base": "4.4.2",
+                    "r-base": "4.4.3",
                     "rcppsimdjson": "0.1.12"
                 },
                 "PICK_ASSEMBLIES": {
@@ -172,6 +172,6 @@
             "nf-test": "0.9.3",
             "nextflow": "26.04.6"
         },
-        "timestamp": "2026-09-08T15:14:19.055285513"
+        "timestamp": "2026-09-09T16:16:10.630600717"
     }
 }
