@@ -31,7 +31,7 @@ format:
     self-contained: true
     embed-resources: true
     grid:
-      sidebar-width: 400px
+      sidebar-width: 370px
       body-width: 1000px
       margin-width: 0px
       gutter-width: 1.5rem
