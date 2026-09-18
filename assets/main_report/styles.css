@@ -1,5 +1,8 @@
+/* Sidebar nav text font size and overflow */
+
 .sidebar h2 {
   font-size: 130% !important;
+  overflow-y: hidden !important;
 }
 
 .sidebar > nav > ul > li .nav-link {
@@ -7,7 +10,7 @@
 }
 
 .sidebar > nav > ul > li > ul > li .nav-link {
-  font-size: 110% !important;
+  font-size: 100% !important;
   color: #888888;
 }
 
@@ -15,6 +18,53 @@
   font-size: 90% !important;
   color: #888888;
 }
+
+#quarto-sidebar #TOC ul li ul li .nav-link {
+  overflow-y: hidden !important;
+}
+
+/* Individual widget and container sizing */
+
+#tabset-2-1 .plotly.html-widget {
+  height: 600px !important;
+  min-height: 600px !important;
+}
+
+#tabset-3-2, 
+#tabset-3-4 {
+    min-height: 1050px !important;
+    height: auto !important;
+}
+
+#tabset-3-2 .plotly.html-widget,
+#tabset-3-4 .plotly.html-widget {
+    height: 1000px !important;
+    min-height: 1000px !important;
+}
+
+#htmlwidget-5d6e7d8ec790402b7edb {
+  overflow-x: hidden !important;
+}
+
+.html-widget.datatables {
+  width: 100% !important;
+  max-width: 100%;
+}
+
+.dataTable {
+  width: 100% !important;
+}
+
+.plotly.html-widget {
+  min-height: min(80vh, 400px) !important;
+  max-height: min(100vh, 2000px) !important;
+}
+
+.heat_tree {
+  max-height: min(80vh, 1000px) !important;
+}
+
+/* General */
 
 h1 {
   border-bottom: 3px solid #666666 !important;
@@ -27,7 +77,8 @@ h1.title {
 }
 
 .content > section {
-  padding-bottom: 50px;
+  padding-bottom: 5px;
+  overflow-x: hidden;
 }
 
 .zoomist-wrapper {
@@ -44,14 +95,4 @@ h1.title {
   width: auto;
   max-width: 100%;
   margin: 0 auto;
-}
-
-.plotly.html-widget {
-  height: auto !important;
-  min-height: min(80vh, 400px) !important;
-  max-height: min(80vh, 1000px) !important;
-}
-
-.heat_tree {
-  max-height: min(80vh, 1000px) !important;
 }
