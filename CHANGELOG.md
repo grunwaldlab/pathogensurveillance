@@ -6,6 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) 
 
 ## Added
 
+- Added support for multiple read files per sample. Files can be supplied as semicolon-delimited lists or as local/S3 glob patterns. Multiple files are concatenated into a single file (or a single forward/reverse pair for paired-end data) before downstream analysis.
 - Added option to use BWA3 for read alignment, increasing speed. This is controlled by the `--aligner` parameter used to switch between BWA and BWA3. 'bwa' must be used with non-AVX2-capable CPUs.
 - Added number of core genes used to infer multigene phylogeny to the report output.
 

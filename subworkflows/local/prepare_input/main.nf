@@ -2,6 +2,7 @@
 // Check input samplesheets and convert to channels
 //
 include { BBMAP_SENDSKETCH       } from '../../../modules/nf-core/bbmap/sendsketch'
+include { CAT_FASTQ              } from '../../../modules/nf-core/cat/fastq'
 include { SAMPLESHEET_CHECK      } from '../../../modules/local/samplesheet_check'
 include { SRATOOLS_FASTERQDUMP   } from '../../../modules/nf-core/sratools/fasterqdump'
 include { INITIAL_CLASSIFICATION } from '../../../modules/local/initial_classification'
@@ -28,6 +29,17 @@ workflow PREPARE_INPUT {
         .splitCsv ( header:true, sep:'\t', quote:'"' )
         .map { row -> create_sample_metadata_channel(row) }
         .filter { sample_meta -> sample_meta.enabled.toBoolean() }
+
+    // Validate that samples with local/S3 paths have at least one resolved file
+    sample_data = sample_data
+        .map { sample_meta ->
+            def has_paths = sample_meta.paths_1.size() > 0 && (sample_meta.single_end || sample_meta.paths_2.size() > 0)
+            def has_ncbi_input = sample_meta.ncbi_accession || sample_meta.ncbi_query
+            if (! has_paths && ! has_ncbi_input) {
+                exit 1, "ERROR: No files matched the path(s) specified for sample '${sample_meta.sample_id}'. Check that the path(s) exist and that glob patterns match at least one file."
+            }
+            sample_meta
+        }
     reference_data = SAMPLESHEET_CHECK.out.reference_data
         .splitCsv ( header:true, sep:'\t', quote:'"' )
         .map { row -> create_reference_metadata_channel(row) }
@@ -97,14 +109,54 @@ workflow PREPARE_INPUT {
     sample_data = all_reads
         .combine(ncbi_acc_sample_key, by: 0)
         .map { ncbi_acc_meta, reads_path, sample_meta, ref_metas ->
-            def paths = reads_path instanceof Collection
-                ? (reads_path.size() <= 2
-                    ? reads_path
-                    : reads_path.findAll{ path -> path ==~ /^.+_[12]\..+$/ })
-                : [reads_path]
-            [sample_meta + [paths: paths, single_end: paths.size() == 1], ref_metas]
+            def paths = reads_path instanceof Collection ? reads_path : [reads_path]
+            def paths_1 = paths.findAll { it.name ==~ /.+_1\..+/ }
+            def paths_2 = paths.findAll { it.name ==~ /.+_2\..+/ }
+            def is_single = paths_2.size() == 0
+            // If no _1/_2 suffixes, treat all files as single-end
+            if (paths_1.size() == 0 && paths_2.size() == 0) {
+                paths_1 = paths
+            }
+            [sample_meta + [paths: paths, paths_1: paths_1, paths_2: paths_2, single_end: is_single], ref_metas]
         }
         .mix(sample_data_without_acc)
+
+    // Concatenate multiple files per sample into a single file (SE) or pair (PE)
+    sample_data_to_concat = sample_data
+        .filter { sample_meta, ref_metas ->
+            sample_meta.paths.size() > (sample_meta.single_end ? 1 : 2)
+        }
+    sample_data_single = sample_data
+        .filter { sample_meta, ref_metas ->
+            sample_meta.paths.size() <= (sample_meta.single_end ? 1 : 2)
+        }
+
+    CAT_FASTQ (
+        sample_data_to_concat
+            .map { sample_meta, ref_metas ->
+                def cat_paths = sample_meta.single_end
+                    ? sample_meta.paths
+                    : [sample_meta.paths_1, sample_meta.paths_2].transpose().flatten()
+                [[id: sample_meta.sample_id, single_end: sample_meta.single_end], cat_paths]
+            }
+    )
+
+    merged_paths = CAT_FASTQ.out.reads
+        .map { meta, reads ->
+            [meta.id, reads instanceof List ? reads : [reads]]
+        }
+    single_paths = sample_data_single
+        .map { sample_meta, ref_metas -> [sample_meta.sample_id, sample_meta.paths] }
+
+    sample_data = sample_data
+        .map { sample_meta, ref_metas -> [sample_meta.sample_id, sample_meta, ref_metas] }
+        .combine(single_paths.mix(merged_paths), by: 0)
+        .map { sample_id, sample_meta, ref_metas, new_paths ->
+            def half = new_paths.size() / 2
+            def new_paths_1 = sample_meta.single_end ? new_paths : new_paths[0..<half]
+            def new_paths_2 = sample_meta.single_end ? [] : new_paths[half..<new_paths.size()]
+            [sample_meta + [paths: new_paths, paths_1: new_paths_1, paths_2: new_paths_2], ref_metas]
+        }
 
     // Look up approximate taxonomic classifications
     BBMAP_SENDSKETCH (
@@ -431,25 +483,32 @@ workflow PREPARE_INPUT {
     messages = messages    // meta, group_meta, ref_meta, workflow, level, message
 }
 
+def resolve_path_segment(String segment) {
+    if (!segment) {
+        return []
+    }
+    if (segment ==~ /^https?:\/\/.*/ && segment ==~ /.*[*?{}\[\]].*/) {
+        exit 1, "ERROR: Glob patterns are not supported for HTTP/HTTPS URLs.\n${segment}"
+    }
+    return files(segment).findAll { it.exists() }
+}
+
 def create_sample_metadata_channel(LinkedHashMap sample_meta) {
-    if (sample_meta.path != "" && !file(sample_meta.path).exists()) {
-        exit 1, "ERROR: Please check the sample metadata TSV/CSV. The file specified by 'path` does not exist.\n${sample_meta.path}"
-    }
-    if (sample_meta.path_2 != "" && !file(sample_meta.path_2).exists()) {
-        exit 1, "ERROR: Please check the sample metadata TSV/CSV. The file specified by 'path_2' does not exist.\n${sample_meta.path_2}"
-    }
     sample_meta = sample_meta.collectEntries { key, value -> [(key): value ?: null] }
     sample_meta.sample_id = sample_meta.sample_id?.toString()
     sample_meta.ref_ids = sample_meta.ref_ids ? sample_meta.ref_ids.toString().split(";") as ArrayList : []
-    sample_meta.single_end = ! sample_meta.path_2
-    def paths = null
-    if (sample_meta.path) {
-        paths = [file(sample_meta.path)]
-        if (sample_meta.path_2) {
-            paths.add(file(sample_meta.path_2))
-        }
-    }
-    sample_meta.paths = paths
+
+    def paths_1 = sample_meta.path
+        ? sample_meta.path.toString().split(';').collect { resolve_path_segment(it.trim()) }.flatten()
+        : []
+    def paths_2 = sample_meta.path_2
+        ? sample_meta.path_2.toString().split(';').collect { resolve_path_segment(it.trim()) }.flatten()
+        : []
+
+    sample_meta.paths_1 = paths_1
+    sample_meta.paths_2 = paths_2
+    sample_meta.paths = paths_1 + paths_2
+    sample_meta.single_end = paths_2.size() == 0
     return sample_meta
 }
 

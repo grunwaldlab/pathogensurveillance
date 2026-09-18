@@ -871,9 +871,33 @@ remove_file_extensions <- function(x) {
     return(gsub(x, pattern = all_ext_pattern, replacement = ''))
 }
 
+# Helper to split semicolon-delimited paths
+split_paths <- function(x) {
+    if (is_present(x)) {
+        unlist(strsplit(x, split = ';'))
+    } else {
+        character(0)
+    }
+}
+
+# Reject HTTP(S) URLs that contain glob characters
+glob_pattern <- '[][*?{}]'
+all_path_values <- c(metadata_samp$path, metadata_samp$path_2)
+all_path_values <- all_path_values[is_present(all_path_values)]
+all_paths <- unlist(lapply(all_path_values, split_paths))
+is_http_glob <- grepl('^https?://', all_paths) & grepl(glob_pattern, all_paths)
+if (any(is_http_glob)) {
+    stop(call. = FALSE, paste0(
+        'Glob patterns are not supported for HTTP/HTTPS URLs: "',
+        all_paths[is_http_glob][1], '"'
+    ))
+}
+
 reads_ids <- unlist(lapply(1:nrow(metadata_samp), function(row_index) {
-    reads_1 <- basename(metadata_samp$path[row_index])
-    reads_2 <- basename(metadata_samp$path_2[row_index])
+    reads_1_paths <- split_paths(metadata_samp$path[row_index])
+    reads_2_paths <- split_paths(metadata_samp$path_2[row_index])
+    reads_1 <- if (length(reads_1_paths) > 0) basename(reads_1_paths[1]) else ''
+    reads_2 <- if (length(reads_2_paths) > 0) basename(reads_2_paths[1]) else ''
     if (is_present(reads_1) && is_present(reads_2)) {
         remove_different_parts <- function(a, b) {
             a_split <- strsplit(reads_1, split = '')[[1]]

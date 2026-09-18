@@ -35,8 +35,7 @@ workflow GENOME_ASSEMBLY {
         meta.type != "illumina" && meta.type != "bgiseq" && meta.type != "nanopore" && meta.type != "pacbio"
     }
 
-    spades_input = short_reads
-    fastp_input = spades_input
+    fastp_input = short_reads
         .map{ sample_meta, read_paths ->    // If there are both single and paired in reads, just use the paired end reads
             [sample_meta, read_paths.size() <= 2 ? read_paths : read_paths.findAll { path -> path ==~ /.+_[12]\..+$/ }, [] ]
         }
@@ -72,7 +71,7 @@ workflow GENOME_ASSEMBLY {
     )
 
     // Warn about any failed Spades assemblies
-    spades_warnings = spades_input
+    spades_warnings = filtered_reads_pass
         .join(SPADES.out.scaffolds, remainder: true)
         .filter { sample_meta, read_paths, scaffolds ->
             ! scaffolds
