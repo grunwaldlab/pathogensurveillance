@@ -77,8 +77,8 @@ workflow CORE_GENOME_PHYLOGENY {
         .map { ref_meta, report_meta, ref_path, gff_path ->
             [ref_meta, report_meta, ref_path, gff_path]
         }
-    selected_ref_data_has_gff = all_ref_data.filter { ref_meta, report_meta, ref_path, gff_path -> gff_path }
-    selected_ref_data_no_gff = all_ref_data.filter { ref_meta, report_meta, ref_path, gff_path -> !gff_path }
+    selected_ref_data_has_gff = selected_ref_data.filter { ref_meta, report_meta, ref_path, gff_path -> gff_path }
+    selected_ref_data_no_gff = selected_ref_data.filter { ref_meta, report_meta, ref_path, gff_path -> !gff_path }
 
     // Download the bakta database if needed
     //   Based on code from the bacass nf-core pipeline using the MIT license: https://github.com/nf-core/bacass

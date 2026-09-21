@@ -110,7 +110,7 @@ closest_named_refs <- unlist(lapply(sample_ids, function(id) {
 required_refs <- unlist(lapply(sample_ids, function(id) {
     sample_data$ref_id[sample_data$sample_id == id & sample_data$usage %in% c('required', 'exclusive')]
 }))
-selected_refs <- unique(c(closest_refs, required_refs))
+selected_refs <- unique(c(closest_refs, closest_named_refs, required_refs))
 
 # Initialized data.frame of bins that need a reference
 bins <- seq(from = 0, to = 1, length.out = n_refs_contextual + 1)
