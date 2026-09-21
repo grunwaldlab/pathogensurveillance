@@ -105,7 +105,7 @@
             "default": "",
             "properties": {
                 "max_samples": {
-                    "type": "integer",
+                    "type": ["integer", "string"],
                     "description": "Maximum number of samples to analyze. The first n samples will be used.",
                     "default": 1000,
                     "fa_icon": "fas fa-vials"
