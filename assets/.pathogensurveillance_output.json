@@ -391,6 +391,25 @@
                 }
             ]
         },
+        "gene_counts": {
+            "name": "Gene counts",
+            "description": "Number of core genes used for multigene phylogenies",
+            "category": "Multigene phylogeny",
+            "primary": false,
+            "parsers": {
+                "r": "PathoSurveilR:::parse_tsv"
+            },
+            "combiners": {
+                "r": "PathoSurveilR:::combine_tables"
+            },
+            "sources": [
+                {
+                    "path": "gene_counts",
+                    "pattern": "^(.+?)_(core|busco)_gene_count\\.tsv$",
+                    "capture_groups": ["report_id", "method"]
+                }
+            ]
+        },
         "downloaded_assemblies": {
             "name": "Downloaded assemblies",
             "description": "Genome assemblies downloaded by the pipeline in gzipped FASTA format",

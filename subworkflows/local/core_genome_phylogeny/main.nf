@@ -29,7 +29,7 @@ workflow CORE_GENOME_PHYLOGENY {
     // Remove samples without a successful assembly
     sample_data = sample_data
         .map{ sample_meta -> [[id: sample_meta.sample_id], sample_meta] }
-        .join(sample_assemblies, by: 0)
+        .combine(sample_assemblies, by: 0)
         .map{ sample_meta, sample_data_map, assembly_path -> sample_data_map }
 
     // Build stable raw TSV text of sample IDs and user-defined references for each group
@@ -55,6 +55,12 @@ workflow CORE_GENOME_PHYLOGENY {
         params.n_ref_closest_named,
         params.n_ref_context
     )
+
+    // Warn when no contextual references are selected
+    no_contextual_refs_core = ASSIGN_CORE_REFERENCES.out.references
+        .filter { group_meta, tsv -> tsv.size() == 0 }
+        .map { group_meta, tsv -> [null, group_meta, null, "CORE_GENOME_PHYLOGENY", "WARNING", "No contextual references were selected for this group. Some outputs may be less informative."] }
+    messages = messages.mix(no_contextual_refs_core)
 
     // Get relevant information from all references assigned to samples
     all_ref_data =  sample_data
@@ -232,6 +238,7 @@ workflow CORE_GENOME_PHYLOGENY {
     phylogeny     = phylogeny               // group_meta, [trees]
     pocp          = CALCULATE_POCP.out.pocp // group_meta, pocp
     selected_refs = ASSIGN_CORE_REFERENCES.out.references // group_meta, tsv
+    gene_count    = SUBSET_CORE_GENES.out.gene_count // group_meta, tsv
     messages      = messages                // meta, group_meta, ref_meta, workflow, level, message
 
 }

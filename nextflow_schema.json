@@ -24,7 +24,7 @@
                     "fa_icon": "fas fa-file-csv"
                 },
                 "max_parallel_downloads": {
-                    "type": "integer",
+                    "type": ["integer", "string"],
                     "description": "Maximum number of parallel downloads allowed for certain processes. This can be set to control the number of concurrent downloads to avoid overloading servers or hitting API rate limits.",
                     "fa_icon": "fas fa-download"
                 },
@@ -105,13 +105,13 @@
             "default": "",
             "properties": {
                 "max_samples": {
-                    "type": "integer",
+                    "type": ["string", "integer"],
                     "description": "Maximum number of samples to analyze. The first n samples will be used.",
                     "default": 1000,
                     "fa_icon": "fas fa-vials"
                 },
                 "max_depth": {
-                    "type": "number",
+                    "type": ["string", "integer"],
                     "default": 100,
                     "description": "Maximum depth of reads to be used for all analyses. Samples with more reads are subsampled to this depth.",
                     "fa_icon": "fas fa-align-center"

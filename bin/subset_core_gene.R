@@ -269,6 +269,11 @@ for (index in seq_along(output_cluster_data)) {
     }
 }
 
+# Write gene count for report
+core_n <- sum(vapply(output_cluster_data, nrow, integer(1)))
+write.table(data.frame(report_group_id = report_group_id, n_genes = core_n, method = 'core'),
+            file = 'core_gene_count.tsv', sep = '\t', quote = FALSE, row.names = FALSE)
+
 # Write data for messages to be shown to the user, such as warnings about removed samples
 write.table(message_data, file = message_data_path, row.names = FALSE, na = '', sep = '\t')
 

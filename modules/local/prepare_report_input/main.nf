@@ -8,7 +8,7 @@ process PREPARE_REPORT_INPUT {
         'community.wave.seqera.io/library/coreutils_grep_gzip_lbzip2_pruned:838ba80435a629f8'}"
 
     input:
-    tuple val(group_meta), path(sample_data), path(ref_data), path(sendsketch), path(ncbi_ref_meta), path(selected_refs), path(ani_matrix), path(mapping_ref), path(snp_aligns), path(snp_phylos), path(core_phylo_refs, stageAs: 'core_phylo_refs.tsv'), path(pocp), path(core_phylos, stageAs: 'core_phylos/*'), path(busco_refs, stageAs: 'busco_refs.tsv'), path(busco_phylos, stageAs: 'busco_phylos/*'), path(multiqc), path(messages), path(versions)
+    tuple val(group_meta), path(sample_data), path(ref_data), path(sendsketch), path(ncbi_ref_meta), path(selected_refs), path(ani_matrix), path(mapping_ref), path(snp_aligns), path(snp_phylos), path(core_phylo_refs, stageAs: 'core_phylo_refs.tsv'), path(pocp), path(core_phylos, stageAs: 'core_phylos/*'), path(busco_refs, stageAs: 'busco_refs.tsv'), path(busco_phylos, stageAs: 'busco_phylos/*'), path(multiqc), path(messages), path(gene_counts), path(versions)
     path output_format_json
 
     output:
@@ -108,6 +108,12 @@ process PREPARE_REPORT_INPUT {
     # Put multiqc's output into a single folder for organization
     if [ ! -z "${multiqc}" ]; then
     	cp -r ${multiqc} ${prefix}_inputs/multiqc
+    fi
+
+    # Add gene counts for report
+    if [ ! -z "${gene_counts}" ]; then
+        mkdir -p ${prefix}_inputs/gene_counts
+        cp -r ${gene_counts} ${prefix}_inputs/gene_counts/
     fi
 
     # Add pipeline status messages

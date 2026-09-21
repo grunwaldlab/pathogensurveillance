@@ -79,10 +79,12 @@ workflow PATHOGENSURVEILLANCE {
         core_selected_refs = CORE_GENOME_PHYLOGENY.out.selected_refs
         core_pocp = CORE_GENOME_PHYLOGENY.out.pocp
         core_phylogeny = CORE_GENOME_PHYLOGENY.out.phylogeny
+        core_gene_counts = CORE_GENOME_PHYLOGENY.out.gene_count
     } else {
         core_selected_refs = channel.empty()
         core_pocp = channel.empty()
         core_phylogeny = channel.empty()
+        core_gene_counts = channel.empty()
     }
 
     // Read2tree BUSCO phylogeny for eukaryotes
@@ -92,6 +94,7 @@ workflow PATHOGENSURVEILLANCE {
         GENOME_ASSEMBLY.out.scaffolds
     )
     messages = messages.mix(BUSCO_PHYLOGENY.out.messages)
+    busco_gene_counts = BUSCO_PHYLOGENY.out.gene_count
 
     // Collate and save software versions
     def topic_versions_all = channel.topic("versions")
@@ -273,6 +276,18 @@ workflow PATHOGENSURVEILLANCE {
         .map { file ->[[id: file.getSimpleName()], file]}
         .ifEmpty([])
 
+    // Gather gene counts for report
+    core_gene_counts_grouped = core_gene_counts
+        .map { report_meta, tsv -> [report_meta, tsv] }
+        .groupTuple(sort: 'hash')
+    busco_gene_counts_grouped = busco_gene_counts
+        .map { report_meta, tsv -> [report_meta, tsv] }
+        .groupTuple(sort: 'hash')
+    gene_counts = core_gene_counts_grouped
+        .mix(busco_gene_counts_grouped)
+        .groupTuple(sort: 'hash')
+        .map { report_meta, tsvs -> [report_meta, tsvs.flatten().unique()] }
+
     // Combine components into a single channel for the main report_meta
     report_inputs = sample_data_tsvs
         .join(reference_data_tsvs, remainder: true)
@@ -290,9 +305,10 @@ workflow PATHOGENSURVEILLANCE {
         .join(BUSCO_PHYLOGENY.out.tree, remainder: true)
         .join(MULTIQC.out.report, remainder: true)
         .join(group_messages, remainder: true)
+        .join(gene_counts, remainder: true)
         .filter{ item -> item[0] != null }
-        .map{ item -> item.size() == 16 ? item + [null] : item }
-        .filter{ item -> item.size() == 17 }
+        .map{ item -> item.size() == 17 ? item + [null] : item }
+        .filter{ item -> item.size() == 18 }
         .map{ item -> item.collect{ element -> element ?: [] } }
         .combine(collated_versions)
 

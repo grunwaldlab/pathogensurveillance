@@ -37,7 +37,7 @@ workflow SKETCH_COMPARISON {
         .unique()
     report_groups_with_assemblies = sample_data
         .map { sample_meta -> [[id: sample_meta.sample_id], [id: sample_meta.report_group_ids]] }
-        .join(assemblies.map { assembly -> assembly[0] }, by: 0)
+        .combine(assemblies.map { assembly -> assembly[0] }, by: 0)
         .map { sample_id, report_group_id -> report_group_id }
         .unique()
     grouped_sigs = ref_sigs

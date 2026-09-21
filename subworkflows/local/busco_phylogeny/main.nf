@@ -23,7 +23,7 @@ workflow BUSCO_PHYLOGENY {
     // Remove samples without a successful assembly
     sample_data = sample_data
         .map{ sample_meta -> [[id: sample_meta.sample_id], sample_meta] }
-        .join(sample_assemblies, by: 0)
+        .combine(sample_assemblies, by: 0)
         .map{ sample_meta, sample_data_map, assembly_path -> sample_data_map }
 
     // Build stable raw TSV text of sample IDs and user-defined references for each group
@@ -49,6 +49,12 @@ workflow BUSCO_PHYLOGENY {
         params.n_ref_closest_named,
         params.n_ref_context
     )
+
+    // Warn when no contextual references are selected
+    no_contextual_refs_busco = ASSIGN_BUSCO_REFERENCES.out.references
+        .filter { group_meta, tsv -> tsv.size() == 0 }
+        .map { group_meta, tsv -> [null, group_meta, null, "BUSCO_PHYLOGENY", "WARNING", "No contextual references were selected for this group. Some outputs may be less informative."] }
+    messages = messages.mix(no_contextual_refs_busco)
 
     // Create channel with required reference metadata and genomes from selected references
     references =  sample_data
@@ -152,5 +158,6 @@ workflow BUSCO_PHYLOGENY {
     messages      = messages // meta, group_meta, ref_meta, workflow, level, message
     selected_refs = ASSIGN_BUSCO_REFERENCES.out.references
     tree          = trees
+    gene_count    = SUBSET_BUSCO_GENES.out.gene_count // group_meta, tsv
 
 }

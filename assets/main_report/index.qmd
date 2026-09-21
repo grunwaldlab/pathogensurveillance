@@ -25,14 +25,19 @@ selected_ref_meta_table <- function(input, target, interactive = FALSE, ...) {
   selected_ref_data <- find_ps_data(input, target = target, simplify = TRUE)
   selected_ref_ids <- unique(selected_ref_data$reference_id)
 
-  downloaded_ref_metadata <- find_ps_data(input, target = 'downloaded_ref_metadata', simplify = TRUE)
-  downloaded_ref_metadata <- downloaded_ref_metadata[match(selected_ref_ids, downloaded_ref_metadata$reference_id), , drop = FALSE]
-
   reference_data <- find_ps_data(input, target = 'reference_metadata', simplify = TRUE)
   reference_data <- reference_data[match(selected_ref_ids, reference_data$ref_id), , drop = FALSE]
   colnames(reference_data)[colnames(reference_data) == 'ref_id'] <- 'reference_id'
 
-  merged_data <- merge(by = "reference_id", reference_data, downloaded_ref_metadata)
+  # Check if downloaded reference metadata is available
+  downloaded_ref_paths <- find_ps_paths(input, target = 'downloaded_ref_metadata', simplify = TRUE, must_exist = FALSE)
+  if (!is.null(downloaded_ref_paths) && nrow(downloaded_ref_paths) > 0) {
+    downloaded_ref_metadata <- find_ps_data(input, target = 'downloaded_ref_metadata', simplify = TRUE)
+    downloaded_ref_metadata <- downloaded_ref_metadata[match(selected_ref_ids, downloaded_ref_metadata$reference_id), , drop = FALSE]
+    merged_data <- merge(by = "reference_id", reference_data, downloaded_ref_metadata)
+  } else {
+    merged_data <- reference_data
+  }
 
   # Subset to desired columns
   cols <- c(
@@ -52,8 +57,9 @@ selected_ref_meta_table <- function(input, target, interactive = FALSE, ...) {
     checkm_completeness = 'Assembly completeness (%)',
     checkm_contamination = 'Assembly contamination (%)'
   )
-  merged_data <- merged_data[, colnames(merged_data) %in% names(cols)]
-  colnames(merged_data) <- cols
+
+  merged_data <- merged_data[, colnames(merged_data) %in% names(cols), drop = FALSE]
+  colnames(merged_data) <- cols[colnames(merged_data)]
 
   # Print table
   if (interactive) {
@@ -339,7 +345,10 @@ The accuracy of this identification depends on the presence of close reference s
 ```{r}
 multigene_tree_paths <- PathoSurveilR::find_ps_paths(params$inputs, target = 'multigene_tree', must_exist = F)
 has_multigene_tree <- ! is.null(multigene_tree_paths)
-n_core_genes <- if (has_multigene_tree) sum(multigene_tree_paths$method == 'core') else 0L
+
+gene_count_data <- find_ps_data(params$inputs, target = 'gene_counts', simplify = TRUE, must_exist = FALSE)
+has_core_genes <- !is.null(gene_count_data) && nrow(gene_count_data) > 0
+n_core_genes <- if (has_core_genes) sum(gene_count_data$n_genes[gene_count_data$method == 'core'], na.rm = TRUE) else 0L
 ```
 
 ```{r plot_multigene_tree, eval=has_multigene_tree, fig.height=8}
@@ -347,14 +356,13 @@ plot_tree(params$inputs, target = 'multigene_tree')
 ```
 
 ```{r, results='asis', eval = has_multigene_tree}
-cat('
+cat(sprintf('
 ::: {.callout-tip collapse="true"}
 ## About this plot
 
-This is a multigene phylogeny of samples with reference genomes for context, inferred from ", n_core_genes, " core genes.
-It is the most robust identification provided by this pipeline, but taxonomic coverage is still limited by the availability of similar reference sequences.
+This is a multigene phylogeny of samples with reference genomes for context, inferred from %s core gene(s). It is the most robust identification provided by this pipeline, but taxonomic coverage is still limited by the availability of similar reference sequences.
 :::
-')
+', n_core_genes))
 ```
 
 ```{r, results='asis', eval = !has_multigene_tree}

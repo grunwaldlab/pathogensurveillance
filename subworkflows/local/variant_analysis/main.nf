@@ -133,7 +133,7 @@ workflow VARIANT_ANALYSIS {
         .map{ sample_meta, report_meta, ref_meta, ref_path, usage, read_paths, sequence_type, ploidy ->
             [ref_meta, sample_meta, report_meta, usage, read_paths, sequence_type, ploidy]
         }
-        .join(compressed_refs, by: 0)
+        .combine(compressed_refs, by: 0)
         .map{ ref_meta, sample_meta, report_meta, usage, read_paths, sequence_type, ploidy, ref_path ->
             [sample_meta, report_meta, ref_meta, ref_path, usage, read_paths, sequence_type, ploidy]
         }
