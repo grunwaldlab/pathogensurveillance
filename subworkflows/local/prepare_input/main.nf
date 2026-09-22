@@ -171,7 +171,7 @@ workflow PREPARE_INPUT {
     // or that have no hits (BBMap reports "No hits." on the second line)
     sendsketch_depth = BBMAP_SENDSKETCH.out.hits
         .splitText(limit: 4, by: 4)
-        .filter{sample_meta, header -> header =~ /Depth:/ && header !=~ /No hits/}
+        .filter{sample_meta, header -> header =~ /Depth:/ && !(header =~ /No hits/)}
         .map { sample_meta, header ->
             def match = header =~ /Depth: ([0-9.]+)/
             [sample_meta, match[0][1]]
@@ -181,7 +181,7 @@ workflow PREPARE_INPUT {
         .map{ sample_meta, hit_data, depth -> [sample_meta, hit_data]}
     no_sketch_warnings =  BBMAP_SENDSKETCH.out.hits
         .splitText(limit: 4, by: 4)
-        .filter{sample_meta, header -> header !=~ /Depth:/ || header =~ /No hits/}
+        .filter{sample_meta, header -> !(header =~ /Depth:/) || header =~ /No hits/}
         .map{ sample_meta, empty ->
             [sample_meta, [id: sample_meta.report_group_ids], null, "PREPARE_INPUT", "WARNING", "Not enough data to make an initial classification. Check size of input data."]
         }

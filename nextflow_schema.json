@@ -111,7 +111,7 @@
                     "fa_icon": "fas fa-vials"
                 },
                 "max_depth": {
-                    "type": ["string", "integer"],
+                    "type": ["integer", "string"],
                     "default": 100,
                     "description": "Maximum depth of reads to be used for all analyses. Samples with more reads are subsampled to this depth.",
                     "fa_icon": "fas fa-align-center"
@@ -159,37 +159,37 @@
                     "fa_icon": "fas fa-hashtag"
                 },
                 "n_ref_closest": {
-                    "type": "number",
+                    "type": ["integer", "string"],
                     "default": 7,
                     "description": "The number of references most similar to each sample based on estimated ANI to include in phyogenetic anlyses.",
                     "fa_icon": "fas fa-hashtag"
                 },
                 "n_ref_closest_named": {
-                    "type": "number",
+                    "type": ["integer", "string"],
                     "default": 4,
                     "description": "Same as the 'n_ref_closest' option except that it only applies to references with what apppear to be standard latin binomaial names (i.e. two words with no numbers or symbols). This is intended to ensure that a refernece with an informative name is present even if it is not the most similar.",
                     "fa_icon": "fas fa-hashtag"
                 },
                 "n_ref_context": {
-                    "type": "number",
+                    "type": ["integer", "string"],
                     "default": 12,
                     "description": "The number of references representing the entire range of ANI relative to each sample. These are meant to provide context for more similar references. For a group of samples, the fewest total references will be selected that satisify this count for each sample.",
                     "fa_icon": "fas fa-hashtag"
                 },
                 "phylo_min_genes": {
-                    "type": "number",
+                    "type": ["integer", "string"],
                     "default": 10,
                     "description": "The minimum number of genes needed to conduct a core gene phylogeny. Samples and references will be removed (as allowed by the `min_core_samps` and `min_core_refs` options) until this minimum is met.",
                     "fa_icon": "fas fa-align-center"
                 },
                 "phylo_max_genes": {
-                    "type": "number",
+                    "type": ["integer", "string"],
                     "default": 500,
                     "description": "The maximum number of genes used to conduct a core gene phylogeny.",
                     "fa_icon": "fas fa-align-center"
                 },
                 "ref_min_ani": {
-                    "type": "number",
+                    "type": ["number", "string"],
                     "default": 0.95,
                     "minimum": 0,
                     "maximum": 1,
@@ -197,26 +197,26 @@
                     "fa_icon": "fas fa-align-center"
                 },
                 "min_bases_to_assemble": {
-                    "type": "number",
+                    "type": ["integer", "string"],
                     "default": 100000,
                     "description": "The minimum number of bases after quality filtering needed to attempt an genome assembly. Samples with few than this amount of bases will be excluded from further analysis.",
                     "fa_icon": "fas fa-align-center"
                 },
                 "max_variants": {
-                    "type": "number",
+                    "type": ["integer", "string"],
                     "default": 100000,
                     "description": "The maximum number of variants to use for the SNP tree and minimum spanning nextwork produced by the variant analysis. The first N variants are used when more than N are available.",
                     "fa_icon": "fas fa-align-center"
                 },
                 "cpu_scale": {
-                    "type": "number",
+                    "type": ["number", "string"],
                     "default": 1.0,
                     "minimum": 0.01,
                     "description": "A scaling factor to adjust the number of CPUs used by multithreaded processes. The number of CPUs for each process will be multiplied by this value and rounded to the nearest integer (minimum 1).",
                     "fa_icon": "fas fa-microchip"
                 },
                 "ram_scale": {
-                    "type": "number",
+                    "type": ["number", "string"],
                     "default": 1.0,
                     "minimum": 0.01,
                     "description": "A scaling factor to adjust the amount of RAM used by processes. The amount of RAM for each process will be multiplied by this value and rounded to the nearest integer in GB (minimum 1).",
