@@ -37,6 +37,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) 
 - Reference NCBI assemblies excluded by the user are no longer downloaded.
 - When multiple assembly versions exist for the same organism (e.g. GCA_000230695.1 vs GCA_000230695.3, or GCA vs GCF), only the best version is retained. RefSeq (GCF) is preferred over GenBank (GCA), and higher version numbers are preferred.
 - Handle numeric-only sample IDs by casting to string.
+- Fixed POCP and core/BUSCO phylogeny not being run for report subgroups (e.g. for samples only assigned to a species-level report group).
+- Fixed report error that occurred when both user-defined primary and contextual references are exclusive.
 
 ## 1.1.0 - 2026-01-30
 

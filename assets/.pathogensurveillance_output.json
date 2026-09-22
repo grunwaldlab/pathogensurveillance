@@ -405,8 +405,8 @@
             "sources": [
                 {
                     "path": "gene_counts",
-                    "pattern": "^(.+?)_(core|busco)_gene_count\\.tsv$",
-                    "capture_groups": ["report_id", "method"]
+                    "pattern": "^(core|busco)_gene_count\\.tsv$",
+                    "capture_groups": ["method"]
                 }
             ]
         },

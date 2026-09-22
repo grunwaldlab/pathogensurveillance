@@ -346,9 +346,14 @@ The accuracy of this identification depends on the presence of close reference s
 multigene_tree_paths <- PathoSurveilR::find_ps_paths(params$inputs, target = 'multigene_tree', must_exist = F)
 has_multigene_tree <- ! is.null(multigene_tree_paths)
 
-gene_count_data <- find_ps_data(params$inputs, target = 'gene_counts', simplify = TRUE, must_exist = FALSE)
-has_core_genes <- !is.null(gene_count_data) && nrow(gene_count_data) > 0
-n_core_genes <- if (has_core_genes) sum(gene_count_data$n_genes[gene_count_data$method == 'core'], na.rm = TRUE) else 0L
+gene_count_paths <- find_ps_paths(params$inputs, target = 'gene_counts', simplify = TRUE, must_exist = FALSE)
+
+if (!is.null(gene_count_paths) && nrow(gene_count_paths) > 0) {
+  gene_count_data <- find_ps_data(params$inputs, target='gene_counts', simplify=TRUE)
+  n_core_genes <- sum(gene_count_data$n_genes[gene_count_data$method=='core'], na.rm=TRUE)
+} else {
+  gene_count_data <- NULL; n_core_genes <- 0L
+}
 ```
 
 ```{r plot_multigene_tree, eval=has_multigene_tree, fig.height=8}
