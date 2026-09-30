@@ -343,23 +343,34 @@ workflow PATHOGENSURVEILLANCE {
     // groupTuple flattens the non-key elements of each item.
     report_template_specs = PREPARE_INPUT.out.report_data
         .splitCsv(header: true, sep: '\t', quote: '"')
-        .map { row -> [cleanField(row.report_group_ids), cleanField(row.template)] }
+        .map { row -> [cleanField(row.report_group_ids), cleanField(row.template), cleanField(row.render_target)] }
         .flatMap { entry ->
             def report_ids = entry[0]
             def tmpl = entry[1]
+            // render_target is optional. It may be a semicolon-delimited list, and is paired with
+            // the template list positionally when the counts match, otherwise applied to each
+            // template, which is how MAIN_REPORT resolves the directory per rendered template.
+            def target_spec = entry[2]
             def groups = report_ids.toString().split(';').collect{ it.trim() }.findAll{ it }
             def templates = tmpl.toString().split(';').collect{ it.trim() }.findAll{ it }
             if (groups.isEmpty() || templates.isEmpty()) return []
-            groups.collectMany{ g -> templates.collect{ t -> [[id: g], [t, true]] } }
+            def targets = target_spec.toString().split(';').collect{ it.trim() }.findAll{ it }
+            groups.collectMany{ g ->
+                templates.withIndex().collect{ t, idx ->
+                    // A lone target applies to every template in the row.
+                    def rt = targets.size() == 1 ? targets[0] : (targets[idx] ?: '')
+                    [[id: g], [t, true, rt]]
+                }
+            }
         }
 
     // Every group gets the default "report" template. Defaults and report_data entries are
     // mixed into ONE channel and grouped by key, so the decision is made per group without
     // join()/combine() -- both of which silently drop every group when report_data is absent.
     default_per_group = PREPARE_INPUT.out.sample_data
-        .map { sample_meta -> [[id: sample_meta.report_group_ids]] }
+        .map { sample_meta -> [id: sample_meta.report_group_ids] }
         .unique()
-        .map { report_meta -> [report_meta, ['report', false]] }
+        .map { report_meta -> [report_meta, ['report', false, '']] }
 
     template_per_group = report_template_specs
         .mix(default_per_group)
@@ -370,17 +381,22 @@ workflow PATHOGENSURVEILLANCE {
             // An explicit report_data template shadows the default for that group, so a group
             // listing only a non-report template renders only that template, while a group
             // listing "report" plus others renders all of them (deduplicated).
-            def explicit = specs.findAll { spec -> spec[1] }.collect { spec -> spec[0] }.unique()
-            def templates = explicit ?: ['report']
-            templates.collect { tmpl -> [report_meta, tmpl] }
+            // Deduplicate on the template/target pair rather than the template alone, so a
+            // render_target keeps following the template it was declared for.
+            def explicit = specs.findAll { spec -> spec[1] }.unique{ spec -> [spec[0], spec[2]] }
+            def templates = explicit ?: [['report', false, '']]
+            templates.collect { spec -> [report_meta, spec[0], spec[2]] }
         }
     template_dirs = template_per_group
-        .map { pair ->
+        .map { item ->
+            def report_meta = item[0]
+            def tmpl = item[1]
+            def render_target = item[2]
             // Canonicalise before this becomes group_meta.template: MAIN_REPORT derives the
-            // published filename from it, so an unaliased "report" would name the file
-            // all_report.html instead of all_pathsurveil_report.html.
-            def canon = canonicalTemplateSpec(pair[1])
-            [pair[0], canon, resolveTemplateDir(canon)]
+            // published directory name from it, so an unaliased "report" would name the report
+            // all_report/ instead of all_pathsurveil_report/.
+            def canon = canonicalTemplateSpec(tmpl)
+            [report_meta, canon, resolveTemplateDir(canon), render_target]
         }
 
     // Combine components into a single channel for the main report_meta
@@ -414,11 +430,12 @@ workflow PATHOGENSURVEILLANCE {
 
     // Combine per-report inputs with per-template dirs for rendering
     // Each report group may have multiple templates (e.g. report;dashboard) -> one render per (group,template)
-    // combine(by: 0) returns [key, report_input, template, template_dir] -- the key element of each
-    // source becomes element 0 and the remaining elements of each source follow in source order.
+    // combine(by: 0) returns [key, report_input, template, template_dir, render_target] -- the key
+    // element of each source becomes element 0 and the remaining elements of each source follow in
+    // source order. render_target is empty when the row did not request a single-file report.
     def main_report_inputs = PREPARE_REPORT_INPUT.out.report_input
         .combine(template_dirs, by: 0)
-        .map { entry -> [[id: entry[0].id, template: entry[2]], entry[1], entry[3]] }
+        .map { entry -> [[id: entry[0].id, template: entry[2], render_target: entry[4]], entry[1], entry[3]] }
 
     MAIN_REPORT(
         main_report_inputs

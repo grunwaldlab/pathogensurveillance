@@ -11,7 +11,9 @@ process MAIN_REPORT {
     tuple val(group_meta), file(inputs), path(template, stageAs: 'main_report_template')
 
     output:
-    tuple val(group_meta), path("${prefix}.html"), emit: html
+    // The report is published as a directory: the whole rendered site, or, when report_data sets
+    // a render_target, a directory holding just that page renamed after the template directory.
+    tuple val(group_meta), path("${prefix}"), emit: html
     tuple val(group_meta), path("${prefix}.pdf") , emit: pdf, optional: true
     path "versions.yml"               , emit: versions_main_report
 
@@ -21,16 +23,16 @@ process MAIN_REPORT {
     script:
     def args = task.ext.args ?: ''
     def tmpl = (group_meta.template ?: '').toString().trim()
-    // A template may be given as an absolute path; use only its final segment for naming.
-    // Interpolating the raw value made both --output-dir and the cp target multi-segment, and
-    // quarto's nested output tree then failed the cp with "No such file or directory". Taking
-    // the basename also keeps the bare-name case consistent: `pathsurveil_dashboard` and
-    // /abs/path/pathsurveil_dashboard name the report identically. The published file is
-    // ${prefix}.html, so the "report" keyword is carried by the directory name itself
-    // (pathsurveil_report) and must not be stripped from the label.
-    // Strip any trailing slashes first, so a harmless typo such as /abs/pathsurveil_report/ still
-    // names the report after the directory. Note the basename cannot come from template.name:
-    // the input is staged as 'main_report_template', so that would yield the staging name.
+    // Optional single-file mode: publish only the rendered page for this .qmd, renamed after the
+    // template directory, instead of the whole site. The target is a base name; a path is
+    // rejected so a row cannot pull in a .qmd from outside the template.
+    def render_target = (group_meta.render_target ?: '').toString().trim()
+    if (render_target.contains('/')) {
+        throw new IllegalArgumentException("report_data render_target '${render_target}' must be the base name of a .qmd in the template directory, not a path")
+    }
+
+    // A template may be given as an absolute path; only its final segment names the report
+    // Trailing slashes are stripped first so a typo still names the report after the directory
     def label = tmpl.replaceAll('/+$', '')
     label = label.contains('/') ? label.substring(label.lastIndexOf('/') + 1) : label
     if (label == '.' || label == '..') {
@@ -38,57 +40,95 @@ process MAIN_REPORT {
     }
     prefix = task.ext.prefix ?: "${group_meta.id}${label ? '_' + label : ''}"
     """
+
     # Needed to avoid this issue: https://github.com/conda-forge/quarto-feedstock/issues/30
     if [[ -f /opt/conda/etc/conda/activate.d/quarto.sh ]]; then
         source /opt/conda/etc/conda/activate.d/quarto.sh
     fi
+
     # Tell quarto where to put cache so it does not try to put it where it does nmt have permissions
     export XDG_CACHE_HOME="\$(pwd)/cache"
 
-    # Template is always a directory containing .qmd (dir-only per report_data spec)
+    # Template is always a directory containing .qmd (dir-only per report_data spec).
+    # Never modify main_report_template itself: it is staged as a symlink into the user's template directory
     cp -r --dereference main_report_template main_report
-    # Drop local development state that should never be staged: .quarto/ is a developer-machine
-    # quarto project cache (xref/idx/freeze) and .gitignore is only meaningful in the source tree.
-    rm -rf main_report/.quarto main_report/.gitignore
 
-    # Render the report
-    # NOTE: quarto resolves --output-dir relative to the project dir, so the rendered site
-    # lands in main_report/${prefix}/ (and a website project nests it under _site/).
-    quarto render main_report \\
+    # .quarto is a committed developer-machine project cache (xref/idx/freeze); the shipped
+    # template carries one, and a stale freeze would corrupt the render.
+    rm -rf main_report/.quarto
+
+    # quarto resolves --output-dir relative to the project dir, so the site lands in
+    # main_report/${prefix}/. A render_target renders only that one .qmd; a full site is still
+    # allowed, it is the user's responsibility to make the target page self-contained.
+    if [[ -n "${render_target}" ]]; then
+        if [[ ! -f "main_report/${render_target}.qmd" ]]; then
+            echo "ERROR: render_target '${render_target}.qmd' is not present in the template directory" >&2
+            exit 1
+        fi
+        render_input="main_report/${render_target}.qmd"
+    else
+        render_input="main_report"
+    fi
+    quarto render \${render_input} \\
         ${args} \\
         --output-dir "${prefix}" \\
         -P inputs:../${inputs}
 
-    # Locate the rendered report page.
-    # NOTE: deliberately no find/xargs/grep here. The task image ships no GNU findutils, so
-    # find and xargs are absent -- xargs reported that as a bare 127 while a swallowed stderr
-    # hid the real message. Globs are expanded by bash, so only coreutils are needed.
-    for tool in ls head cp; do
+    # Locate the rendered report site
+    for tool in cp rm; do
         command -v \$tool >/dev/null 2>&1 || { echo "ERROR: required tool '\$tool' not found in the task image" >&2; exit 1; }
     done
-    # NOTE: every use of ${prefix} below is quoted. A directory name may contain spaces
-    # (e.g. "my templates"), and an unquoted expansion would word-split out_dir, silently
-    # break the glob, and make cp target the wrong path.
-    out_dir="main_report/${prefix}"
-    if [[ ! -d \$out_dir ]]; then
-        echo "ERROR: expected quarto output directory \$out_dir was not created" >&2
+    site_dir="main_report/${prefix}"
+    if [[ ! -d \$site_dir ]]; then
+        echo "ERROR: expected quarto output directory \$site_dir was not created" >&2
         exit 1
     fi
-    # Largest page wins ('ls -S'): a website project's index.html can be a small redirect stub
-    # sitting next to the substantive report page. nullglob plus plain globs keep this working
-    # under the bash 3.2 shipped with macOS, so no globstar is used.
-    # NOTE: each glob is double-quoted per component, because bash splits an unquoted variable
-    # on IFS (spaces in a directory name would otherwise truncate the pattern) and expands the
-    # glob against whatever split fragments resulted.
+
+    # The _site descent is a guard for a version that nests a website site one level down,
+    # which would otherwise bury the report under a redundant _site/ level.
+    if [[ -d "\$site_dir/_site" ]]; then
+        site_dir="\$site_dir/_site"
+    fi
+
+    # Fail loudly if nothing rendered, rather than publishing an empty directory
     shopt -s nullglob
-    html_files=( "\$out_dir"/*.html "\$out_dir"/*/*.html "\$out_dir"/*/*/*.html )
+    html_files=( "\$site_dir"/*.html "\$site_dir"/*/*.html "\$site_dir"/*/*/*.html )
     shopt -u nullglob
     if [[ \${#html_files[@]} -eq 0 ]]; then
-        echo "ERROR: quarto produced no HTML in \$out_dir" >&2
+        echo "ERROR: quarto produced no HTML in \$site_dir" >&2
         exit 1
     fi
-    real_report=\$(ls -S "\${html_files[@]}" | head -n1)
-    cp -L "\$real_report" "${prefix}.html"
+
+    rm -rf "${prefix}"
+    mkdir -p "${prefix}"
+
+    if [[ -n "${render_target}" ]]; then
+        # Single-file mode: the rendered page is the whole published report, renamed after the
+        # template directory. Sources are deliberately not published, since a self-contained page
+        # does not need them and the point of the option is a one-file output.
+        target_html="\${site_dir}/${render_target}.html"
+        if [[ ! -f "\$target_html" ]]; then
+            echo "ERROR: quarto did not produce \$target_html" >&2
+            exit 1
+        fi
+        cp "\$target_html" "${prefix}/${prefix}.html"
+    else
+        # Publish the template sources alongside the render, so relative references a stylesheet
+        # or custom filter relies on still resolve and the .qmd files ship with the report.
+        shopt -s nullglob dotglob
+        for src in main_report_template/*; do
+            # .quarto is the only exclusion. Everything else is published.
+            case "\$(basename "\$src")" in
+                .quarto) continue ;;
+            esac
+            # --dereference so a symlink inside the template lands as a real file
+            cp -r --dereference "\$src" "${prefix}/"
+        done
+        shopt -u nullglob dotglob
+
+        # Rendered output last, so the product always wins a name clash with a source file.
+        cp -R "\$site_dir/." "${prefix}/"
+    fi
 
     # Clean up
     rm -r main_report

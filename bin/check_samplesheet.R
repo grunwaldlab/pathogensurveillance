@@ -95,7 +95,8 @@ known_columns_ref <- c(
 )
 known_columns_rep <- c(
     'report_group_ids',
-    'template'
+    'template',
+    'render_target'
 )
 
 # Default values for columns
@@ -921,11 +922,62 @@ if (nrow(metadata_rep) > 0) {
         stop(call. = FALSE, paste0('report_data template "', v, '" contains no .qmd files. Templates must be a directory containing at least one .qmd.'))
     }
 
+    # render_target names a single .qmd inside the template directory, which is the only file
+    # published for that row. Checked here so a typo fails before the run rather than as a
+    # confusing render error. Templates are allowed to be full sites, so the target need not be
+    # self-contained; whether the published file stands alone is the user's responsibility.
+    if ('render_target' %in% colnames(metadata_rep)) {
+        # A row may list several semicolon-delimited templates. MAIN_REPORT renders one report per
+        # (group, template) and carries the row's target to each of them, so the target is
+        # required to exist in every listed template directory, not just one.
+        split_field <- function(value) {
+            parts <- trimws(strsplit(as.character(value), ";")[[1]])
+            parts[!is.na(parts) & parts != ""]
+        }
+        for (i in seq_len(nrow(metadata_rep))) {
+            targets <- split_field(metadata_rep$render_target[[i]])
+            if (length(targets) == 0) {
+                next
+            }
+            # A target must be a bare file name. A path would let a row pull a .qmd from outside the
+            # template directory, which is not what the column means and would not render as part
+            # of the project.
+            for (t in targets) {
+                if (grepl('/', t)) {
+                    stop(call. = FALSE, paste0(
+                        'report_data render_target "', t, '" must be the base name of a .qmd file in the ',
+                        'template directory, not a path. Use e.g. "index" rather than "subdir/index".'
+                    ))
+                }
+            }
+            for (tmpl in split_field(metadata_rep$template[[i]])) {
+                # template_status() has already rejected any unresolvable template by this point.
+                dir <- if (grepl('^/', tmpl)) {
+                    sub('/+$', '', tmpl)
+                } else {
+                    name <- if (tmpl %in% names(report_template_aliases)) unname(report_template_aliases[[tmpl]]) else tmpl
+                    file.path(projectDir, 'assets/report_templates', name)
+                }
+                for (t in targets) {
+                    if (!file.exists(file.path(dir, paste0(t, '.qmd')))) {
+                        stop(call. = FALSE, paste0(
+                            'report_data render_target "', t, '" is not a .qmd file in template "', tmpl,
+                            '". Use the base name of an existing .qmd in that directory, without the ',
+                            '.qmd extension.'
+                        ))
+                    }
+                }
+            }
+        }
+    }
+
     # Published reports are named "<report group>_<template dir name>.html", so the directory
     # name alone decides the output filename. Two templates that reduce to the same name would
     # write the same file, so reject the whole file rather than let one silently overwrite the
     # other. Aliases are resolved first, so listing both "report" and "pathsurveil_report" for a
     # group is caught even though the two strings differ.
+    # When render_target is set the output name no longer varies with the qmd, so two targets
+    # resolving to one template are caught here too.
     report_template_label <- function(v) {
         v <- sub('/+$', '', v)
         if (grepl('^/', v)) {

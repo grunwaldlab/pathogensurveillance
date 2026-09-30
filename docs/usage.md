@@ -111,13 +111,21 @@ The reference metadata TSV or the sample metadata TSV can have the following col
 Additionally, users can supply a report metadata TSV/CSV that can be used to assign custom report templates to particular report groups using the `--report_data` option.
 If not provided, the pipeline will use the default report template.
 Each row in this table defines a custom report output for a given report group. Multiple templates can be assigned to a single report group by adding multiple rows or delimiting values by semicolons.
+Reports will be published in a directory corresponding to the template name, including their source files, unless the `render_target` column is populated for a given row. In that case, only the `render_target` file will be published and renamed after the template directory.
+
+Specifically, a report for group `my_subset` built from a template directory `dashboard` is published as:
+
+- `reports/my_subset_dashboard/` containing the whole rendered site and the template sources, or
+- `reports/my_subset_dashboard/my_subset_dashboard.html` containing only that one file, when `render_target` is set.
+
+> **Note on `render_target`:** When set, the pipeline renders and publishes only the named page, and it is the user's responsibility to ensure that page is self-contained. Nothing verifies this at runtime: a target that depends on other pages, stylesheets, or images will be published with broken references, and the pipeline will not warn. A full site template may be used as a `render_target` source, but then the published file is generally not self-contained. Templates that are intended to be used this way should set `embed-resources: true` (and `self-contained: true` for HTML output) in their `_quarto.yml`.
 For example, the following file content given to `--report_data` would assign report groups to report templates:
 
 ```csv title="report_data.csv"
-report_group_ids,template
-all_samples,report
-all_samples,dashboard
-my_subset,/path/to/template/dir
+report_group_ids,template,render_target
+all_samples,report,
+all_samples,dashboard,
+my_subset,/path/to/template/dir,index
 ```
 
 To make this have an effect, the `--input` spreadsheet must have the `report_group_ids` column defined with the same ID:
@@ -134,8 +142,8 @@ TREATMENT_REP3,AEG588A6_S6_L003_R1_001.fastq.gz,all_samples;my_subset
 
 The report metadata TSV can have the following columns:
 - `report_group_ids`: Report group IDs defined in the sample metadata. Can accept multiple values if delimited by semicolons.
-- `template`: The name of an included template or path to a custom user-defined quarto template directory. Can accept multiple values if delimited by semicolons.
-
+- `template`: The name of an included template (currently, the only valid one of which is 'report') or absolute path to a custom user-defined quarto template directory. Can accept multiple values if delimited by semicolons.
+- `render_target`: Optional. The base name (without the `.qmd` extension) of a .qmd file in the template directory, which becomes the sole published report file. Can accept multiple values if delimited by semicolons, in which case they are matched to the `template` list by position. If a single value is given it applies to every template in the row. If not specified, the entire template directory will be published. Must be a base name rather than a path, and must name a .qmd that exists in each template directory listed in the same row. See the note above on self-containment.
 
 
 ## Running the pipeline
