@@ -12,60 +12,13 @@ include { SKETCH_COMPARISON           } from '../subworkflows/local/sketch_compa
 include { GENOME_ASSEMBLY             } from '../subworkflows/local/genome_assembly'
 include { BUSCO_PHYLOGENY             } from '../subworkflows/local/busco_phylogeny'
 include { INITIAL_QC_CHECKS           } from '../subworkflows/local/initial_qc_checks'
-include { MAIN_REPORT                 } from '../modules/local/main_report'
+include { RENDER_REPORT                 } from '../modules/local/render_report'
 include { DOWNLOAD_ASSEMBLIES         } from '../modules/local/download_assemblies'
 include { PREPARE_REPORT_INPUT        } from '../modules/local/prepare_report_input'
 include { softwareVersionsToYAML      } from '../subworkflows/nf-core/utils_nfcore_pipeline'
 include { paramsSummaryMap            } from 'plugin/nf-schema'
 include { paramsSummaryMultiqc        } from '../subworkflows/nf-core/utils_nfcore_pipeline'
 include { methodsDescriptionText      } from '../subworkflows/local/utils_nfcore_pathogensurveillance_pipeline'
-
-// Built-in template directory aliases. The default directory was renamed to pathsurveil_report,
-// but "report" is what users have always written in report_data, so it keeps working. The
-// canonical directory name is also what names the published report, so the alias has to be
-// applied before the value reaches MAIN_REPORT, not merely when resolving the path. Kept in
-// step with the alias map in bin/check_samplesheet.R.
-def templateAliases() {
-    return ['report': 'pathsurveil_report']
-}
-
-// Canonical form of a report_data template spec: aliases are replaced, absolute paths are left
-// alone (there is nothing to alias, and their basename becomes the name of the report).
-def canonicalTemplateSpec(String spec) {
-    def value = spec?.toString()?.trim() ?: ''
-    if (value.startsWith('/')) {
-        return value
-    }
-    def aliases = templateAliases()
-    return aliases.containsKey(value) ? aliases[value] : value
-}
-
-def resolveTemplateDir(String spec) {
-    // Kept in step with template_status() in bin/check_samplesheet.R: a bare name resolves under
-    // assets/report_templates/, an absolute path is used as-is, and anything else is rejected.
-    // Relative paths must never be resolved here. file() would anchor them to the launch
-    // directory rather than the project root, while the R validator resolves against the task
-    // work dir, so the two would disagree on the same input.
-    def value = canonicalTemplateSpec(spec)
-    if (value.startsWith('~')) {
-        error("report_data template '${value}' starts with '~', which is not expanded. Use an absolute path (e.g. /data/templates/tpl) or a name resolved under assets/report_templates/.")
-    }
-    if (value.startsWith('/')) {
-        return file(value)
-    }
-    if (value.contains('/') || value.startsWith('.')) {
-        error("report_data template '${value}' is a relative path. Use an absolute path (e.g. /data/templates/tpl) or a name resolved under assets/report_templates/.")
-    }
-    return file("${projectDir}/assets/report_templates/${value}")
-}
-
-// Normalise a field read from a metadata table: trim and drop surrounding quotes so that
-// report_group_ids/template line up with the unquoted values coming from the samplesheet.
-def cleanField(value) {
-    def text = value?.toString() ?: ''
-    text = text.replaceAll('^\s*["\']', '').replaceAll('["\']\s*$', '')
-    text.trim()
-}
 
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -336,67 +289,13 @@ workflow PATHOGENSURVEILLANCE {
         .groupTuple(sort: 'hash')
         .map { report_meta, tsvs -> [report_meta, tsvs.flatten().unique()] }
 
-    // Resolve report templates per group (report_data optional, default "report")
-    // PREPARE_INPUT.out.report_data is a TSV file (header report_group_ids,template)
-    // Items are [report_meta, [template, is_explicit]]; is_explicit marks a template that came
-    // from report_data rather than the built-in default. The pair is nested in a list because
-    // groupTuple flattens the non-key elements of each item.
-    report_template_specs = PREPARE_INPUT.out.report_data
+    // Report metadata is normalized by SAMPLESHEET_CHECK: one row per group/template.
+    template_dirs = PREPARE_INPUT.out.report_data
         .splitCsv(header: true, sep: '\t', quote: '"')
-        .map { row -> [cleanField(row.report_group_ids), cleanField(row.template), cleanField(row.render_target)] }
-        .flatMap { entry ->
-            def report_ids = entry[0]
-            def tmpl = entry[1]
-            // render_target is optional. It may be a semicolon-delimited list, and is paired with
-            // the template list positionally when the counts match, otherwise applied to each
-            // template, which is how MAIN_REPORT resolves the directory per rendered template.
-            def target_spec = entry[2]
-            def groups = report_ids.toString().split(';').collect{ it.trim() }.findAll{ it }
-            def templates = tmpl.toString().split(';').collect{ it.trim() }.findAll{ it }
-            if (groups.isEmpty() || templates.isEmpty()) return []
-            def targets = target_spec.toString().split(';').collect{ it.trim() }.findAll{ it }
-            groups.collectMany{ g ->
-                templates.withIndex().collect{ t, idx ->
-                    // A lone target applies to every template in the row.
-                    def rt = targets.size() == 1 ? targets[0] : (targets[idx] ?: '')
-                    [[id: g], [t, true, rt]]
-                }
-            }
-        }
-
-    // Every group gets the default "report" template. Defaults and report_data entries are
-    // mixed into ONE channel and grouped by key, so the decision is made per group without
-    // join()/combine() -- both of which silently drop every group when report_data is absent.
-    default_per_group = PREPARE_INPUT.out.sample_data
-        .map { sample_meta -> [id: sample_meta.report_group_ids] }
-        .unique()
-        .map { report_meta -> [report_meta, ['report', false, '']] }
-
-    template_per_group = report_template_specs
-        .mix(default_per_group)
-        .groupTuple(by: 0, sort: 'hash')
-        .flatMap { entry ->
-            def report_meta = entry[0]
-            def specs = entry[1]
-            // An explicit report_data template shadows the default for that group, so a group
-            // listing only a non-report template renders only that template, while a group
-            // listing "report" plus others renders all of them (deduplicated).
-            // Deduplicate on the template/target pair rather than the template alone, so a
-            // render_target keeps following the template it was declared for.
-            def explicit = specs.findAll { spec -> spec[1] }.unique{ spec -> [spec[0], spec[2]] }
-            def templates = explicit ?: [['report', false, '']]
-            templates.collect { spec -> [report_meta, spec[0], spec[2]] }
-        }
-    template_dirs = template_per_group
-        .map { item ->
-            def report_meta = item[0]
-            def tmpl = item[1]
-            def render_target = item[2]
-            // Canonicalise before this becomes group_meta.template: MAIN_REPORT derives the
-            // published directory name from it, so an unaliased "report" would name the report
-            // all_report/ instead of all_pathsurveil_report/.
-            def canon = canonicalTemplateSpec(tmpl)
-            [report_meta, canon, resolveTemplateDir(canon), render_target]
+        .map { row ->
+            def report_meta = [id: row.report_group_ids.toString()]
+            def template_meta = [template: row.template.toString(), render_target: row.render_target.toString()]
+            [report_meta, template_meta, file(row.template.toString(), checkIfExists: true)]
         }
 
     // Combine components into a single channel for the main report_meta
@@ -428,17 +327,32 @@ workflow PATHOGENSURVEILLANCE {
         channel.fromPath("${projectDir}/assets/.pathogensurveillance_output.json", checkIfExists: true).first()
     )
 
-    // Combine per-report inputs with per-template dirs for rendering
-    // Each report group may have multiple templates (e.g. report;dashboard) -> one render per (group,template)
-    // combine(by: 0) returns [key, report_input, template, template_dir, render_target] -- the key
-    // element of each source becomes element 0 and the remaining elements of each source follow in
-    // source order. render_target is empty when the row did not request a single-file report.
-    def main_report_inputs = PREPARE_REPORT_INPUT.out.report_input
-        .combine(template_dirs, by: 0)
-        .map { entry -> [[id: entry[0].id, template: entry[2], render_target: entry[4]], entry[1], entry[3]] }
+    // Bundle channel values by name before combining each report group's inputs and template.
+    report_inputs_by_group = PREPARE_REPORT_INPUT.out.report_input
+        .map { group_meta, input_dir -> [group_meta, [inputs: input_dir]] }
+    templates_by_group = template_dirs
+        .map { group_meta, template_meta, template_dir ->
+            [
+                group_meta,
+                [
+                    template: template_meta.template,
+                    render_target: template_meta.render_target,
+                    dir: template_dir
+                ]
+            ]
+        }
+    def render_report_inputs = report_inputs_by_group
+        .combine(templates_by_group, by: 0)
+        .map { group_meta, report, template ->
+            [
+                group_meta + [template: template.template, render_target: template.render_target],
+                report.inputs,
+                template.dir
+            ]
+        }
 
-    MAIN_REPORT(
-        main_report_inputs
+    RENDER_REPORT(
+        render_report_inputs
     )
 
     // Collate and save messages

@@ -1,4 +1,4 @@
-process MAIN_REPORT {
+process RENDER_REPORT {
     tag "$group_meta.id"
     label 'process_low'
 
@@ -8,11 +8,11 @@ process MAIN_REPORT {
         'community.wave.seqera.io/library/r-pathosurveilr_quarto:d4f39be8e8ae4734' }"
 
     input:
-    tuple val(group_meta), file(inputs), path(template, stageAs: 'main_report_template')
+    tuple val(group_meta), file(inputs), path(template, stageAs: 'render_report_template')
 
     output:
     tuple val(group_meta), path("${prefix}*"), emit: report, optional: true
-    path "versions.yml", emit: versions_main_report
+    path "versions.yml", emit: versions_render_report
 
     when:
     task.ext.when == null || task.ext.when
@@ -36,10 +36,10 @@ process MAIN_REPORT {
     export XDG_CACHE_HOME="\$(pwd)/cache"
 
     # Render a private copy; the staged template may be a symlink to user data.
-    cp -r --dereference main_report_template main_report
-    rm -rf main_report/.quarto
+    cp -r --dereference render_report_template render_report
+    rm -rf render_report/.quarto
 
-    quarto render main_report \\
+    quarto render render_report \\
         ${args} \\
         --output-dir "${prefix}" \\
         -P inputs:../${inputs}
@@ -47,11 +47,12 @@ process MAIN_REPORT {
     for tool in cp rm; do
         command -v \$tool >/dev/null 2>&1 || { echo "ERROR: required tool '\$tool' not found in the task image" >&2; exit 1; }
     done
-    site_dir="main_report/${prefix}"
+    site_dir="render_report/${prefix}"
     if [[ -d "\$site_dir/_site" ]]; then
         site_dir="\$site_dir/_site"
     fi
 
+    # Publish single target or full directory
     if [[ -n "${render_target}" ]]; then
         target_file="\$site_dir"/${target_shell}
         if [[ -f "\$target_file" ]]; then
@@ -63,23 +64,18 @@ process MAIN_REPORT {
         shopt -u nullglob dotglob
         if [[ -d "\$site_dir" && \${#rendered_entries[@]} -gt 0 ]]; then
             mkdir -p "${prefix}"
-            shopt -s nullglob dotglob
-            for src in main_report_template/*; do
-                cp -r --dereference "\$src" "${prefix}/"
-            done
-            shopt -u nullglob dotglob
             cp -R "\$site_dir/." "${prefix}/"
         fi
     fi
 
     # Clean up
-    rm -r main_report
+    rm -r render_report
 
     # Save version of quarto used
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
         quarto: \$(quarto --version)
-        r-PathoSurveilR: \$(Rscript -e "cat(as.character(packageVersion('dplyr')))")
+        r-PathoSurveilR: \$(Rscript -e "cat(as.character(packageVersion('r-pathosurveilr')))")
     END_VERSIONS
     """
 }

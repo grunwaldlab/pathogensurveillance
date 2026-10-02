@@ -312,16 +312,16 @@ The `reference_data` folder contains information regarding references, including
 <summary>output files</summary>
 
 - `reports/`
-  - `<Report ID>_<Template directory name>/`: Directory containing the rendered report. The template directory name defaults to `pathsurveil_report`, so the default report for the group `all` is written to `all_pathsurveil_report/`. Open `index.html` in this directory to view it. When a report group is assigned more than one template in `--report_data`, one directory is written per template.
-    - If the row in `--report_data` sets `render_target`, this directory instead contains the single file `<Report ID>_<Template directory name>.html`, holding only the rendered page for that `.qmd`. The directory is still published in both cases, so the path to the report does not change.
+  - `<Report ID>_<Template directory name>/`: Directory containing the rendered report. When a report group is assigned more than one template in `--report_data`, one directory is written per template.
+  - `<Report ID>_<Template directory name>.<extension>`: When `render_target` is set, the exact matching file from the rendered output is published directly under `reports/`.
 
 </details>
 
 This is the primary output of the pipeline, containing the report meant to be understandable by non-bioinformaticians.
 
-Each report directory contains the full rendered site, so every page of a multi-page template is included along with the stylesheets, scripts and images those pages reference. This means templates that are not self-contained still display correctly.
+Each full report directory contains the rendered site, so every page of a multi-page template is included along with the stylesheets, scripts and images those pages reference. A `render_target` publishes only the exact matching rendered file.
 
-The template's own source files are published alongside the rendered pages, so the report can be edited and re-rendered. Every entry in the template directory is included, including a local `_extensions` directory, so quarto shortcodes and filters keep working. The only omission is `.quarto`, the developer-machine project cache, which is stripped to keep a stale freeze from corrupting the render.
+Unless a `render_target`, is set, the template's own source files are published alongside the rendered pages, so the report can be edited and re-rendered.
 
 ### Grouped report data
 
