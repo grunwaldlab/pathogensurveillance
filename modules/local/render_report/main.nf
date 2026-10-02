@@ -44,9 +44,7 @@ process RENDER_REPORT {
         --output-dir "${prefix}" \\
         -P inputs:../${inputs}
 
-    for tool in cp rm; do
-        command -v \$tool >/dev/null 2>&1 || { echo "ERROR: required tool '\$tool' not found in the task image" >&2; exit 1; }
-    done
+    # Locate rendered output
     site_dir="render_report/${prefix}"
     if [[ -d "\$site_dir/_site" ]]; then
         site_dir="\$site_dir/_site"
