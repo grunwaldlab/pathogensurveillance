@@ -45,6 +45,9 @@ workflow PREPARE_INPUT {
         .splitCsv ( header:true, sep:'\t', quote:'"' )
         .map { row -> create_reference_metadata_channel(row) }
         .filter { ref_meta -> ref_meta.ref_enabled.toBoolean() }
+    report_data = SAMPLESHEET_CHECK.out.report_data
+        .splitCsv(header: true, sep: '\t', quote: '"')
+        .map { row -> create_report_metadata_channel(row) }
     messages = messages.mix (
         SAMPLESHEET_CHECK.out.message_data
             .splitCsv ( header:true, sep:'\t', quote:'"' )
@@ -482,7 +485,7 @@ workflow PREPARE_INPUT {
     family_stats = ncbi_ref_meta
     selected_ref_meta = picked_assemblies_stat_files
     family_stats_per_sample = family_stats_per_sample
-    report_data = SAMPLESHEET_CHECK.out.report_data
+    report_data
     messages = messages    // meta, group_meta, ref_meta, workflow, level, message
 }
 
@@ -523,4 +526,13 @@ def create_reference_metadata_channel(LinkedHashMap ref_meta) {
     ref_meta.ref_id = ref_meta.ref_id?.toString()
     ref_meta.ref_path = ref_meta.ref_path ? file(ref_meta.ref_path) : null
     return ref_meta
+}
+
+def create_report_metadata_channel(LinkedHashMap row) {
+    def report_meta = [id: row.report_group_ids.toString()]
+    def template_meta = [
+        template: row.template.toString(),
+        render_target: row.render_target.toString()
+    ]
+    return [report_meta, template_meta, file(row.template.toString(), checkIfExists: true)]
 }
