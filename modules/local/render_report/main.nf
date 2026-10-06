@@ -2,10 +2,10 @@ process RENDER_REPORT {
     tag "$group_meta.id"
     label 'process_low'
 
-    conda "conda-forge::quarto=1.6.41 bioconda::r-pathosurveilr=0.4.8"
+    conda "conda-forge::quarto=1.6.41 bioconda::r-pathosurveilr=0.4.8 conda-forge::latexmk=4.88 conda-forge::tectonic=0.17.0"
     container "${ workflow.containerEngine in ['singularity', 'apptainer'] && !task.ext.singularity_pull_docker_container ?
-        'https://community-cr-prod.seqera.io/docker/registry/v2/blobs/sha256/e4/e487168aaa5f7b7a2dfabc1f308869fac1c466ab6bd34acd7a3715d927337c74/data':
-        'community.wave.seqera.io/library/r-pathosurveilr_quarto:d4f39be8e8ae4734' }"
+        'https://community-cr-prod.seqera.io/docker/registry/v2/blobs/sha256/15/159334bee8e9c74c1c964125f9d586f97481457a63eab737c86894224c7c4c1b/data':
+        'community.wave.seqera.io/library/r-pathosurveilr_latexmk_quarto_tectonic:d274308f89b69fd3' }"
 
     input:
     tuple val(group_meta), file(inputs), path(template, stageAs: 'render_report_template')
@@ -73,7 +73,7 @@ process RENDER_REPORT {
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
         quarto: \$(quarto --version)
-        r-PathoSurveilR: \$(Rscript -e "cat(as.character(packageVersion('r-pathosurveilr')))")
+        r-PathoSurveilR: \$(Rscript -e "cat(as.character(packageVersion('PathoSurveilR')))")
     END_VERSIONS
     """
 }
