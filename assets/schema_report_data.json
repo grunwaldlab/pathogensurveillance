@@ -12,8 +12,8 @@
             },
             "template": {
                 "type": "string",
-                "default": "report",
-                "errorMessage": "The `template` column must be the name of a template directory included with the pipeline (resolved under assets/report_templates/) or an absolute path to a custom template directory. Relative paths are not supported."
+                "default": "pathsurveil_report",
+                "errorMessage": "The `template` column must be the name of a template directory included with the pipeline (resolved under assets/report_templates/) or a path to a custom template directory."
             },
             "render_target": {
                 "type": "string",

@@ -1206,12 +1206,15 @@ if (nrow(metadata_rep) > 0) {
 
 resolve_template <- function(value) {
     value <- trimws(value)
-    if (grepl('^~', value)) {
-        stop(call. = FALSE, paste0('report_data template "', value, '" starts with "~", which is not expanded.'))
-    }
-    candidates <- value
-    if (!grepl('^/', value)) {
-        candidates <- c(candidates, file.path(projectDir, value), file.path(projectDir, 'assets/report_templates', value))
+    known_template <- file.path(projectDir, 'assets', 'report_templates', value)
+    if (dir.exists(known_template)) {
+        candidates <- known_template
+    } else {
+        expanded_value <- path.expand(value)
+        candidates <- expanded_value
+        if (!grepl('^/', expanded_value)) {
+            candidates <- c(candidates, file.path(projectDir, expanded_value))
+        }
     }
     matches <- candidates[dir.exists(candidates)]
     if (length(matches) == 0) {
@@ -1330,6 +1333,7 @@ if (nrow(metadata_rep) > 0) {
 # Replace double quotes with single quotes to not conflict with the CSV format quoting values
 metadata_samp[] <- lapply(metadata_samp, gsub, pattern = '"', replacement = "'")
 metadata_ref[] <- lapply(metadata_ref, gsub, pattern = '"', replacement = "'")
+metadata_rep[] <- lapply(metadata_rep, gsub, pattern = '"', replacement = "'")
 message_data[] <- lapply(message_data, gsub, pattern = '"', replacement = "'")
 
 # Write data for messages to be shown to the user, such as warnings about removed samples

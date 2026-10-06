@@ -319,9 +319,7 @@ The `reference_data` folder contains information regarding references, including
 
 This is the primary output of the pipeline, containing the report meant to be understandable by non-bioinformaticians.
 
-Each full report directory contains the rendered site, so every page of a multi-page template is included along with the stylesheets, scripts and images those pages reference. A `render_target` publishes only the exact matching rendered file.
-
-Unless a `render_target`, is set, the template's own source files are published alongside the rendered pages, so the report can be edited and re-rendered.
+Each full report directory contains the rendered report output(s), plus associated stylesheets and assets. If a `render_target` is set, only the exact matching rendered file is published to the report directory.
 
 ### Grouped report data
 

@@ -289,14 +289,8 @@ workflow PATHOGENSURVEILLANCE {
         .groupTuple(sort: 'hash')
         .map { report_meta, tsvs -> [report_meta, tsvs.flatten().unique()] }
 
-    // Report metadata is normalized by SAMPLESHEET_CHECK: one row per group/template.
+    // Report metadata is parsed and templates are staged by PREPARE_INPUT.
     template_dirs = PREPARE_INPUT.out.report_data
-        .splitCsv(header: true, sep: '\t', quote: '"')
-        .map { row ->
-            def report_meta = [id: row.report_group_ids.toString()]
-            def template_meta = [template: row.template.toString(), render_target: row.render_target.toString()]
-            [report_meta, template_meta, file(row.template.toString(), checkIfExists: true)]
-        }
 
     // Combine components into a single channel for the main report_meta
     report_inputs = sample_data_tsvs
@@ -327,27 +321,13 @@ workflow PATHOGENSURVEILLANCE {
         channel.fromPath("${projectDir}/assets/.pathogensurveillance_output.json", checkIfExists: true).first()
     )
 
-    // Bundle channel values by name before combining each report group's inputs and template.
-    report_inputs_by_group = PREPARE_REPORT_INPUT.out.report_input
-        .map { group_meta, input_dir -> [group_meta, [inputs: input_dir]] }
-    templates_by_group = template_dirs
-        .map { group_meta, template_meta, template_dir ->
+    render_report_inputs = PREPARE_REPORT_INPUT.out.report_input
+        .combine(PREPARE_INPUT.out.report_data, by: 0)
+        .map { group_meta, input_dir, template_meta, template_dir ->
             [
-                group_meta,
-                [
-                    template: template_meta.template,
-                    render_target: template_meta.render_target,
-                    dir: template_dir
-                ]
-            ]
-        }
-    def render_report_inputs = report_inputs_by_group
-        .combine(templates_by_group, by: 0)
-        .map { group_meta, report, template ->
-            [
-                group_meta + [template: template.template, render_target: template.render_target],
-                report.inputs,
-                template.dir
+                group_meta + template_meta,
+                input_dir,
+                template_dir
             ]
         }
 

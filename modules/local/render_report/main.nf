@@ -36,16 +36,16 @@ process RENDER_REPORT {
     export XDG_CACHE_HOME="\$(pwd)/cache"
 
     # Render a private copy; the staged template may be a symlink to user data.
-    cp -r --dereference render_report_template render_report
-    rm -rf render_report/.quarto
+    cp -r --dereference render_report_template report_template
+    rm -rf report_template/.quarto
 
-    quarto render render_report \\
+    quarto render report_template \\
         ${args} \\
         --output-dir "${prefix}" \\
         -P inputs:../${inputs}
 
     # Locate rendered output
-    site_dir="render_report/${prefix}"
+    site_dir="report_template/${prefix}"
     if [[ -d "\$site_dir/_site" ]]; then
         site_dir="\$site_dir/_site"
     fi
@@ -57,17 +57,14 @@ process RENDER_REPORT {
             cp -- "\$target_file" "${prefix}${target_extension}"
         fi
     else
-        shopt -s nullglob dotglob
-        rendered_entries=( "\$site_dir"/* )
-        shopt -u nullglob dotglob
-        if [[ -d "\$site_dir" && \${#rendered_entries[@]} -gt 0 ]]; then
+        if [[ -d "\$site_dir" ]]; then
             mkdir -p "${prefix}"
             cp -R "\$site_dir/." "${prefix}/"
         fi
     fi
 
     # Clean up
-    rm -r render_report
+    rm -r report_template
 
     # Save version of quarto used
     cat <<-END_VERSIONS > versions.yml
