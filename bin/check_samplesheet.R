@@ -98,7 +98,6 @@ known_columns_rep <- c(
     'template',
     'render_target'
 )
-
 # Default values for columns
 defaults_ref <- c(
     ref_ncbi_query_max = '100',
@@ -116,7 +115,8 @@ defaults_samp <- c(
     ref_enabled = defaults_ref[['ref_enabled']]
 )
 defaults_rep <- c(
-    template = 'pathsurveil_report'
+    template = 'pathsurveil_report',
+    render_target = 'index.html'
 )
 
 # Columns that must have a valid value in the input of this script
@@ -1208,21 +1208,12 @@ resolve_template <- function(value) {
     value <- trimws(value)
     known_template <- file.path(projectDir, 'assets', 'report_templates', value)
     if (dir.exists(known_template)) {
-        candidates <- known_template
+        resolved <- known_template
     } else {
-        expanded_value <- path.expand(value)
-        candidates <- expanded_value
-        if (!grepl('^/', expanded_value)) {
-            candidates <- c(candidates, file.path(projectDir, expanded_value))
+        resolved <- value
+        if (!dir.exists(resolved)) {
+            stop(call. = FALSE, paste0('report_data template "', value, '" does not resolve to an existing directory.'))
         }
-    }
-    matches <- candidates[dir.exists(candidates)]
-    if (length(matches) == 0) {
-        stop(call. = FALSE, paste0('report_data template "', value, '" does not resolve to an existing directory.'))
-    }
-    resolved <- normalizePath(matches[[1]], winslash = '/', mustWork = TRUE)
-    if (length(list.files(resolved, pattern = '\\.qmd$', recursive = TRUE)) == 0) {
-        stop(call. = FALSE, paste0('report_data template "', value, '" contains no .qmd files.'))
     }
     resolved
 }

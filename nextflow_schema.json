@@ -233,7 +233,7 @@
                     "fa_icon": "fas fa-memory"
                 },
                 "skip_core_phylogeny": {
-                    "type": ["boolean","string"],
+                    "type": ["boolean", "string"],
                     "default": false,
                     "description": "Skip the core genome phylogeny analysis. This will not affect downstream processes like MultiQC and the main report.",
                     "fa_icon": "fas fa-forward"

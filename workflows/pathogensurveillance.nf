@@ -321,15 +321,12 @@ workflow PATHOGENSURVEILLANCE {
         channel.fromPath("${projectDir}/assets/.pathogensurveillance_output.json", checkIfExists: true).first()
     )
 
+    templates_by_group = PREPARE_INPUT.out.report_data
+        .map { report_meta -> [[id: report_meta.report_group_ids.toString()], report_meta] }
+
     render_report_inputs = PREPARE_REPORT_INPUT.out.report_input
-        .combine(PREPARE_INPUT.out.report_data, by: 0)
-        .map { group_meta, input_dir, template_meta, template_dir ->
-            [
-                group_meta + template_meta,
-                input_dir,
-                template_dir
-            ]
-        }
+        .combine(templates_by_group, by: 0)
+        .map { group_meta, input_dir, report_meta -> [group_meta + report_meta, input_dir, report_meta.template] }
 
     RENDER_REPORT(
         render_report_inputs

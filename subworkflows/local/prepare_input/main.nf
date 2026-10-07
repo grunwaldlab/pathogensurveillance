@@ -528,11 +528,10 @@ def create_reference_metadata_channel(LinkedHashMap ref_meta) {
     return ref_meta
 }
 
-def create_report_metadata_channel(LinkedHashMap row) {
-    def report_meta = [id: row.report_group_ids.toString()]
-    def template_meta = [
-        template: row.template.toString(),
-        render_target: row.render_target.toString()
-    ]
-    return [report_meta, template_meta, file(row.template.toString(), checkIfExists: true)]
+def create_report_metadata_channel(LinkedHashMap report_meta) {
+    report_meta = report_meta.collectEntries { key, value ->
+        [(key): value ?: null]
+    }
+    report_meta.template = file(report_meta.template.toString())
+    return report_meta
 }
