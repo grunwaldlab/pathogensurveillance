@@ -2,26 +2,232 @@
 
 :root {
   --bslib-spacer: 0;
+
+  --ps-accent:      #1e6e3a;   // existing green, used sparingly
+  --ps-accent-soft: #eef4f0;   // very light tint for headers/footer
+  --ps-ink:         #1f2328;   // near-black text
+  --ps-muted:       #5b6470;   // secondary text, labels
+  --ps-rule:        #d0d4d9;   // hairline borders
+  --ps-serif: "Georgia", "Times New Roman", serif;
+  --ps-sans:  "Helvetica", "Segoe UI", sans-serif;
 }
 
-.bslib-gap-spacing {
-  padding: 0px !important;
-  row-gap: 0px !important;
-  column-gap: 0px !important;
-}
+/* ---------- Grid Setup ---------- */
 
-// Card/grid item padding
+#quarto-content > .cell.bslib-grid-item.html-fill-item { display: none !important; }
+
 .bslib-grid {
-  padding: 0px !important;
-  gap: 0px !important;
+  display: grid;
+  grid-template-rows: auto auto auto;
+  padding: 8px !important;
+  gap: 8px !important;
 }
 
-// Global font size reduction
-html {
-  font-size: 14px !important;
+.html-fill-item.bslib-grid { display: grid; grid-template-rows: subgrid; }
+
+// remove top bar element padding
+.bslib-gap-spacing {
+  padding: 0 !important;
+  row-gap: 0 !important;
+  column-gap: 0 !important;
 }
 
-// Card body text
-.card-body {
-  font-size: 0.9rem !important;
+/* ---------- Typography ---------- */
+
+html { font-size: 14px !important; }
+
+body {
+  font-family: var(--ps-sans);
+  color: var(--ps-ink);
+  background-color: #fff;
+}
+
+h1, h2, h3, h4 { font-family: var(--ps-serif); color: var(--ps-ink); }
+
+.card-body { font-size: 0.9rem !important; line-height: 1.5; }
+
+/* ---------- Navbar & footer ---------- */
+
+.navbar {
+  background-color: #fff !important;
+  border-bottom: 1px solid var(--ps-rule);
+  box-shadow: none !important;
+}
+
+.navbar-title-text {
+  color: var(--ps-ink) !important;
+  font-family: var(--ps-serif);
+}
+
+.navbar .nav-link,
+.navbar .navbar-nav .nav-link,
+.quarto-dashboard .navbar-nav-buttons a {
+  color: var(--ps-ink) !important;
+  font-family: var(--ps-sans);
+  font-size: 1rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  border-bottom: 3px solid transparent;
+  border-radius: 0;
+}
+
+.navbar .nav-link:hover { color: var(--ps-accent) !important; }
+
+// active tab: underline instead of a filled block (black on dark green had poor contrast)
+.navbar .nav-link.active,
+.navbar .navbar-nav .nav-link.active,
+.navbar .nav-item.active .nav-link {
+  background-color: transparent !important;
+  color: var(--ps-accent) !important;
+  border-bottom: 3px solid var(--ps-accent) !important;
+  border-color: transparent transparent var(--ps-accent) transparent !important;
+}
+
+.nav-footer {
+  background-color: var(--ps-accent-soft) !important;
+  border-top: 1px solid var(--ps-rule);
+  font-size: 0.8rem;
+  color: var(--ps-muted);
+}
+
+/* ---------- Cards ---------- */
+
+.card.bslib-card {
+  border: 1px solid var(--ps-rule) !important;
+  border-radius: 2px !important;
+  box-shadow: none !important;
+  overflow-y: hidden !important;
+  background-color: #fff;
+}
+
+#about > .bslib-grid > .bslib-grid:nth-child(1) .bslib-card .card-body {
+    padding: 10px !important;
+}
+
+#about > .bslib-grid > .bslib-grid:nth-child(2) .bslib-card .card-body {
+    padding: 10px !important;
+    overflow-y: auto !important;
+}
+
+.card.bslib-card .card-body { overflow-y: hidden !important; }
+.card-body.html-fill-item.html-fill-container { padding: 0 !important; }
+
+.card-header {
+  background-color: var(--ps-accent-soft) !important;
+  border-bottom: 1px solid var(--ps-rule) !important;
+  color: var(--ps-ink);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0.45rem 0.8rem;
+}
+
+.card-header .card-title {
+  font-family: var(--ps-serif);
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  margin: 0;
+}
+
+/* ---------- Value boxes (summary stats) ---------- */
+
+.bslib-value-box {
+  background-color: #fff !important;
+  color: var(--ps-ink) !important;
+  border: 1px solid var(--ps-rule) !important;
+  border-left: 4px solid var(--ps-accent) !important;
+  border-radius: 2px !important;
+  box-shadow: none !important;
+  margin: 0 !important;
+}
+
+.bslib-value-box .value-box-title {
+  font-family: var(--ps-sans);
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ps-muted);
+}
+
+.bslib-value-box .value-box-value {
+  font-family: var(--ps-serif);
+  font-size: 1.9rem;
+  font-weight: 600;
+  font-variant-numeric: lining-nums tabular-nums;
+}
+
+/* ---------- Info button & popover ---------- */
+
+.info-btn {
+  margin-left: auto;              // pin icon to the right of the header
+  color: var(--ps-muted);
+  font-size: 0.95em;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.info-btn:hover,
+.info-btn:focus { color: var(--ps-accent); }
+
+.popover {
+  max-width: 320px;
+  font-size: 0.9rem;
+  padding: 0 !important;
+  overflow: hidden;
+  border: 1px solid var(--ps-rule);
+  border-radius: 2px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+}
+
+.popover-header {
+  margin: 0 !important;
+  background-color: var(--ps-accent-soft);
+  color: var(--ps-ink);
+  font-family: var(--ps-serif);
+  font-weight: 600;
+  border-bottom: 1px solid var(--ps-rule);
+  border-radius: 0;
+}
+
+.popover-body {
+  padding: 0.75rem 1rem;
+  color: var(--ps-ink);
+  line-height: 1.5;
+}
+
+/* References: keep entries at natural height and make the pane scrollable */
+#refs,
+.references,
+.csl-bib-body {
+  display: block !important;
+  flex: none !important;
+}
+
+.csl-entry {
+  flex: none !important;
+  margin-bottom: 0.5rem;
+  padding-left: 1.5em;     // hanging indent, as in journal reference lists
+  text-indent: -1.5em;
+  line-height: 1.4;
+}
+
+/* Make each reference a normal inline text block again */
+#refs .csl-entry,
+.csl-bib-body .csl-entry {
+  display: block !important;
+  flex: none !important;
+  margin: 0 0 0.6rem 0;
+  padding-left: 1.5em;       // hanging indent
+  text-indent: -1.5em;
+  line-height: 1.4;
+  text-align: left;
+}
+
+/* Keep inline pieces (italic journal, links) inline */
+#refs .csl-entry > *,
+#refs .csl-entry em,
+#refs .csl-entry a {
+  display: inline !important;
 }
