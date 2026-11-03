@@ -1,0 +1,43 @@
+Andrews, Simon et al. 2010. “FastQC: A Quality Control Tool for High Throughput Sequence Data.” Cambridge, United Kingdom.
+
+Bayliss, Sion C, Harry A Thorpe, Nicola M Coyle, Samuel K Sheppard, and Edward J Feil. 2019. “PIRATE: A Fast and Scalable Pangenomics Toolbox for Clustering Diverged Orthologues in Bacteria.” Gigascience 8 (10): giz119.
+
+Brown, C Titus, and Luiz Irber. 2016. “Sourmash: A Library for MinHash Sketching of DNA.” Journal of Open Source Software 1 (5): 27.
+
+Chen, Shifu. 2023. “Ultrafast One-Pass FASTQ Data Preprocessing, Quality Control, and Deduplication Using Fastp.” Imeta 2 (2): e107.
+
+Danecek, Petr, James K Bonfield, Jennifer Liddle, John Marshall, Valeriu Ohan, Martin O Pollard, Andrew Whitwham, et al. 2021. “Twelve Years of SAMtools and BCFtools.” Gigascience 10 (2): giab008.
+
+Di Tommaso, Paolo, Maria Chatzou, Evan W Floden, Pablo Prieto Barja, Emilio Palumbo, and Cedric Notredame. 2017. “Nextflow Enables Reproducible Computational Workflows.” Nature Biotechnology 35 (4): 316–19.
+
+Distribution, Anaconda Software. 2016. “Computer Software.” Vers. 4: 2–2.
+
+Eggertsson, Hannes P, Hakon Jonsson, Snaedis Kristmundsdottir, Eirikur Hjartarson, Birte Kehr, Gisli Masson, Florian Zink, et al. 2017. “Graphtyper Enables Population-Scale Genotyping Using Pangenome Graphs.” Nature Genetics 49 (11): 1654–60.
+
+Garrison, Erik, Zev N Kronenberg, Eric T Dawson, Brent S Pedersen, and Pjotr Prins. 2022. “A Spectrum of Free Software Tools for Processing the VCF Variant Call Format: Vcflib, Bio-Vcf, Cyvcf2, Hts-Nim and Slivar.” PLoS Computational Biology 18 (5): e1009123.
+
+Katoh, Kazutaka, Kazuharu Misawa, Kei-ichi Kuma, and Takashi Miyata. 2002. “MAFFT: A Novel Method for Rapid Multiple Sequence Alignment Based on Fast Fourier Transform.” Nucleic Acids Research 30 (14): 3059–66.
+
+Kurtzer, Gregory M, Vanessa Sochat, and Michael W Bauer. 2017. “Singularity: Scientific Containers for Mobility of Compute.” PloS One 12 (5): e0177459.
+
+Li, Heng. 2011. “Tabix: Fast Retrieval of Sequence Features from Generic TAB-Delimited Files.” Bioinformatics 27 (5): 718–19.
+
+Li, Heng, and Richard Durbin. 2009. “Fast and Accurate Short Read Alignment with Burrows–Wheeler Transform.” Bioinformatics 25 (14): 1754–60.
+
+Manni, Mosè, Matthew R Berkeley, Mathieu Seppey, Felipe A Simão, and Evgeny M Zdobnov. 2021. “BUSCO Update: Novel and Streamlined Workflows Along with Broader and Deeper Phylogenetic Coverage for Scoring of Eukaryotic, Prokaryotic, and Viral Genomes.” Molecular Biology and Evolution 38 (10): 4647–54.
+
+Mikheenko, Alla, Andrey Prjibelski, Vladislav Saveliev, Dmitry Antipov, and Alexey Gurevich. 2018. “Versatile Genome Assembly Evaluation with QUAST-LG.” Bioinformatics 34 (13): i142–50.
+
+Nguyen, Lam-Tung, Heiko A Schmidt, Arndt Von Haeseler, and Bui Quang Minh. 2015. “IQ-TREE: A Fast and Effective Stochastic Algorithm for Estimating Maximum-Likelihood Phylogenies.” Molecular Biology and Evolution 32 (1): 268–74.
+
+“Picard Toolkit.” 2019. Broad Institute, GitHub Repository. https://broadinstitute.github.io/picard/; Broad Institute.
+
+Prjibelski, Andrey, Dmitry Antipov, Dmitry Meleshko, Alla Lapidus, and Anton Korobeynikov. 2020. “Using SPAdes de Novo Assembler.” Current Protocols in Bioinformatics 70 (1): e102.
+
+Qin, Qi-Long, Bin-Bin Xie, Xi-Ying Zhang, Xiu-Lan Chen, Bai-Cheng Zhou, Jizhong Zhou, Aharon Oren, and Yu-Zhong Zhang. 2014. “A Proposed Genus Boundary for the Prokaryotes Based on Genomic Insights.” Journal of Bacteriology 196 (12): 2210–15.
+
+R Core Team. 2021. R: A Language and Environment for Statistical Computing. Vienna, Austria: R Foundation for Statistical Computing. https://www.R-project.org/.
+
+Schwengers, Oliver, Lukas Jelonek, Marius Alfred Dieckmann, Sebastian Beyvers, Jochen Blom, and Alexander Goesmann. 2021. “Bakta: Rapid and Standardized Annotation of Bacterial Genomes via Alignment-Free Sequence Identification.” Microbial Genomics 7 (11): 000685.
+
+Van der Auwera, Geraldine A, and Brian D O’Connor. 2020. Genomics in the Cloud: Using Docker, GATK, and WDL in Terra. O’Reilly Media.

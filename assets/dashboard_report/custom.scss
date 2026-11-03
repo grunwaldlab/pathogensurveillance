@@ -25,6 +25,21 @@
 
 .html-fill-item.bslib-grid { display: grid; grid-template-rows: subgrid; }
 
+/* Outer inset: only the grid that is a direct child of a dashboard page */
+.dashboard-page > .bslib-grid {
+  padding: 8px !important;
+}
+
+/* Grids nested inside that grid (columns/rows) get no extra inset */
+.dashboard-page .bslib-grid .bslib-grid {
+  padding: 0 !important;
+}
+
+.html-fill-item.html-fill-container.bslib-grid {
+  align-items: stretch !important;
+  justify-items: stretch !important;
+}
+
 // remove top bar element padding
 .bslib-gap-spacing {
   padding: 0 !important;
@@ -100,6 +115,11 @@ h1, h2, h3, h4 { font-family: var(--ps-serif); color: var(--ps-ink); }
   background-color: #fff;
 }
 
+#data > .card.html-fill-item.html-fill-container.bslib-card {
+    padding: 10px !important;
+    overflow-y: auto !important;
+}
+
 #about > .bslib-grid > .bslib-grid:nth-child(1) .bslib-card .card-body {
     padding: 10px !important;
 }
@@ -107,6 +127,31 @@ h1, h2, h3, h4 { font-family: var(--ps-serif); color: var(--ps-ink); }
 #about > .bslib-grid > .bslib-grid:nth-child(2) .bslib-card .card-body {
     padding: 10px !important;
     overflow-y: auto !important;
+}
+
+#data .card-body.cell {
+  padding: 10px !important;
+  overflow: hidden !important;
+}
+
+#data .card-body.cell > .cell-output-display,
+#data .cell-output-display > .datatables.html-widget {
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 0;
+  overflow: hidden !important;
+}
+
+#data .dataTables_wrapper {
+  width: 100% !important;
+  height: 100% !important;
+  overflow: auto !important;
+}
+
+#data table.dataTable {
+  width: 100% !important;
+  margin: 0 !important;
+  height: 100% !important;
 }
 
 .card.bslib-card .card-body { overflow-y: hidden !important; }

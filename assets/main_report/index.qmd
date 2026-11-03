@@ -1,7 +1,7 @@
 ---
 title: Pathogen Surveillance Report
 params:
-    inputs: "C:/Users/cwpri/Downloads/test_output/test_output"
+    inputs: "C:/Users/cwpri/test_output"
 execute:
     echo: false
 bibliography: references.bib
@@ -338,7 +338,7 @@ sample_data <- find_ps_data(params$inputs, target = 'sample_metadata', simplify 
 ref_data <- find_ps_data(params$inputs, target = 'reference_metadata', simplify = TRUE)
 ```
 
-```{r plot_msns, results='asis', eval = ! is.null(align_data) && nrow(align_data) > 0}
+```{r plot_msns, results='asis', eval = ! is.null(align_data) && nrow(align_data) > 0, cache = TRUE}
 # Find which columns are used to provide colors to the trees, if any
 ids_used <- unique(unlist(lapply(alignments, function(a) {
     if (is.null(a)) {

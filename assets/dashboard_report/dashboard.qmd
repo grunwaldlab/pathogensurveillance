@@ -32,6 +32,7 @@ library(PathoSurveilR)
 run_info <- find_ps_data(params$inputs, target = 'pipeline_run_info', simplify = TRUE)
 group <- run_info$group_id
 sample_data <- find_ps_data(params$inputs, target = 'sample_metadata', simplify = TRUE)
+reference_data <- find_ps_data(params$inputs, target = 'reference_metadata', simplify = TRUE)
 message_data <- find_ps_data(params$inputs, target = 'messages', simplify = TRUE)
 no_messages <- nrow(message_data) == 0
 ```
@@ -157,12 +158,16 @@ This can happen when there are too few samples or too few SNPs.
 See staus messages at the start of the report for details.
 ')
 ```
+# Data
+:::{.card title="Input Data"}
+```{r}
+PathoSurveilR::sample_meta_table(params$inputs, interactive = TRUE)
+```
+:::
 
 # About
 ## Row {height=30%}
-
-:::{.card}
-## Methods
+:::{.card title="Methods"}
 The `pathogen surveillance` pipeline used the following tools that should be referenced as appropriate:
 
 - A sample is first identified to genus using sendsketch and further identified to species using sourmash [@brown2016sourmash].

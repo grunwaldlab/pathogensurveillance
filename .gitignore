@@ -34,4 +34,12 @@ assets/main_report/*_files
 assets/main_report/*.html
 assets/main_report/*.ipynb
 assets/main_report/packages.bib
+assets/dashboard_report/.quarto
+assets/dashboard_report/.gitignore
+assets/dashboard_report/_book
+assets/dashboard_report/_site
+assets/dashboard_report/*_files
+assets/dashboard_report/*.html
+assets/dashboard_report/*.ipynb
+assets/dashboard_report/packages.bib
 .aider*
